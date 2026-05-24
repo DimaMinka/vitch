@@ -4,13 +4,26 @@ An interactive terminal-styled macOS desktop workspace to configure, preview, an
 
 ---
 
-## 🚀 GitHub Pages Static Deploy
+## 🚀 GitHub Pages Deployment
 
-We have compiled a standalone **HTML Single-File Version** optimized specifically for instant publishing to **GitHub Pages** or hosting statically!
+We have configured two robust options to deploy **Vitch** to GitHub Pages:
 
-1. Locate `/github-pages-index.html` in this repository.
-2. Rename it to `index.html` or upload it directly to your GitHub repository's main branch (or `gh-pages` branch).
-3. Activate GitHub Pages under **Repository Settings > Pages** to run **Vitch** instantly as a fast, high-performance static web app.
+### Option A: Automated Build & Deploy via GitHub Actions (Recommended)
+We have integrated a fully automated GitHub Actions workflow (`deploy.yml`) that compiles the full React + Vite application every time you push code to GitHub.
+
+1. **Push your code** to your repository's main branch (`main` or `master`). This automatically runs the GitHub Action to build and export the production app into a new branch called `gh-pages`.
+2. Go to your **GitHub Repository page** on the web.
+3. Click on **Settings** (the gear icon) at the top menu.
+4. Navigate to **Pages** on the left sidebar under the *Code and automation* section.
+5. Under **Build and deployment**, locate the **Source** dropdown and select **Deploy from a branch**.
+6. In the **Branch** selection, choose `gh-pages` and select `/ (root)` folder, then click **Save**.
+7. GitHub will deploy the interactive, fully featured Vitch app immediately! (This takes about 1-2 minutes).
+
+### Option B: Hand-crafted Standalone HTML Single-file App (Fall-back)
+If you prefer a lightweight deployment without automated steps:
+1. Find the local file `/github-pages-index.html` in your project folder.
+2. Direct-upload it to your primary branch or copy the content and write it into a file named exactly `index.html`.
+3. Set your GitHub Pages branch source to point directly to that branch, under **Repository Settings > Pages**.
 
 ---
 
