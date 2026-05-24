@@ -201,14 +201,38 @@
                 <!-- LEFT WORKSPACE BLOCK (COL-SPAN-6) -->
                 <div class="col-span-12 md:col-span-6 border-r border-[#2d3748] p-5 flex flex-col justify-between space-y-4 bg-[#080c16]/50">
                     <div class="flex-1">
-                        <div class="flex items-center justify-between border-b border-[#2d3748] pb-2 mb-3">
+                        <div class="flex items-center justify-between border-b border-[#2d3748] pb-2 mb-2">
                             <span class="text-amber-400 font-bold uppercase tracking-wide flex items-center space-x-1">
                                 <i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-500"></i>
-                                <span>~/Movies/RawBroll/ (Stitch Timeline)</span>
+                                <span>macOS Directory Scanner & Assembler Queue</span>
                             </span>
-                            <button onclick="clearTimeline()" class="text-[9px] text-[#93c5fd] bg-[#1e293b] border border-[#334155] px-2 py-0.5 rounded hover:bg-[#334155] transition">
-                                Clear Queue
+                            <button onclick="clearTimeline()" class="text-[9px] text-red-400 bg-red-950/20 border border-red-900/30 px-2 py-0.5 rounded hover:bg-red-900/30 transition font-bold cursor-pointer">
+                                Clear All
                             </button>
+                        </div>
+
+                        <!-- Directory Path Input Mock -->
+                        <div class="bg-[#080b12] px-3 py-2 border-b border-[#2d3748]/40 flex flex-col space-y-1.5 rounded mb-3">
+                            <div class="flex items-center space-x-2 w-full">
+                                <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Path:</span>
+                                <input
+                                    type="text"
+                                    value="~/Movies"
+                                    placeholder="e.g. ~/Movies or /Users/username/Downloads"
+                                    readonly
+                                    class="flex-1 bg-[#05080e] border border-[#2d3748]/60 rounded px-2 py-0.5 text-gray-400 outline-none text-[11px] font-mono cursor-not-allowed"
+                                />
+                                <button
+                                    disabled
+                                    class="px-2 py-0.5 text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded font-bold opacity-50 cursor-not-allowed"
+                                >
+                                    Scan Directory
+                                </button>
+                            </div>
+                            <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-amber-500 font-semibold select-none">⚠️ Directory scan requires running Vitch locally (npm run dev)</span>
+                                <span class="text-gray-500 font-bold uppercase"><span id="left-count-text">3</span> videos queued</span>
+                            </div>
                         </div>
 
                         <!-- Video Timeline Box -->
@@ -487,7 +511,7 @@
             <!-- Terminal output file monitoring box in book -->
             <div class="mt-8 bg-[#05080e] border border-gray-900 rounded-lg p-4 font-mono text-[10px] text-gray-500">
                 <span class="text-gray-400 font-bold block mb-2 uppercase tracking-widest text-[9px]">Local Log Tracking command:</span>
-                <p class="mb-3 text-[11px] text-gray-300 select-all bg-[#0a0f18] p-2 rounded border border-gray-800">tail -f tui_video_assembler.log</p>
+                <p class="mb-3 text-[11px] text-gray-300 select-all bg-[#0a0f18] p-2 rounded border border-gray-800">tail -f vitch_pipeline.log</p>
                 <div class="space-y-1 text-gray-600">
                     <p>[2026-05-24 12:45:01] INFO: Log File initialized inside target folder /Movies/RawBroll/</p>
                     <p>[2026-05-24 12:45:02] INFO: Confirmed 3 source MP4 video files have shared resolution constraints.</p>
@@ -618,6 +642,8 @@
             let totalDur = clips.reduce((acc, c) => acc + c.duration, 0).toFixed(1);
             document.getElementById('head-count').innerText = clips.length;
             document.getElementById('head-dur').innerText = totalDur;
+            const leftCount = document.getElementById('left-count-text');
+            if (leftCount) leftCount.innerText = clips.length;
         }
 
         // Timeline actions handler
@@ -901,7 +927,7 @@ then
 fi
 
 # Reset log
-echo "=== Start Vitch Render System ===" > tui_video_assembler.log
+echo "=== Start Vitch Render System ===" > vitch_pipeline.log
 
 `;
 
