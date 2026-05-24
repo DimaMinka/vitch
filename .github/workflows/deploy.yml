@@ -21,9 +21,7 @@ jobs:
       - name: Install and Build 🔧
         uses: actions/setup-node@v4
         with:
-          node-size: '20'
-          node-version: 20
-          cache: 'npm'
+          node-version: '22'
 
       - name: Build Application 🚀
         run: |
