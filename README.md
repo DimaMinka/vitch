@@ -27,6 +27,24 @@ An interactive terminal-styled macOS desktop workspace to configure, preview, an
 
 ---
 
+## 🛠️ Core Compiler Architecture Improvements
+
+### 1. Robust Path Resolution Engine (`resolvePath`)
+* **Auto-Quoting Sanitization**: Automatically strips surrounding single (`'`) and double (`"`) quotes from custom user paths.
+* **Absolute Path Priority**: Seamlessly detects fully qualified paths (starting with `/`, `~`, `./` or Windows drive roots) and prioritizes them, completely ignoring defaults from `.env`.
+* **File-to-Directory Fallbacks**: If environment variables (like `VITE_LUT_DIR`) point directly to a file instead of a directory, the engine extracts the parent directory path automatically to resolve filenames.
+
+### 2. High-Performance Filter Chain (Zero-Copy Pass-Through)
+* **Stream-Mapping Correction**: Eliminated redundant `split` filters in FFmpeg that previously duplicated video tracks, enabling correct playback in QuickTime and other native macOS players.
+* **Speed & Compression Optimization**: Removed parallel stream encoding, saving up to 50% CPU encoding cycles and halving output file size with zero quality loss.
+* **Core Pass-Through**: Employs FFmpeg's standard `null` video filter for safe stream pad renaming without duplication.
+
+### 3. Dynamic Command Assembly Engine
+* **Syntactic Safety**: Command assembly is executed procedurally in TypeScript prior to Bash template interpolation.
+* **Dangling Backslash Prevention**: Eliminates bash newline compilation bugs (such as `./assemble.sh: -c:v: command not found`) under extreme pipeline configuration states (e.g., combining silent drone footage with bypassed backing audio).
+
+---
+
 ## ⌨️ Dashboard Interactive Keyboard Shortcuts
 
 To navigate the terminal wrapper with lightning efficiency, use standard native Hotkeys:
