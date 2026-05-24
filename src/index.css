@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", sans-serif;
 }
 
 /* Custom terminal scanlines or style helpers */
@@ -29,6 +30,15 @@
   background: #3e5062;
 }
 
+/* Custom glow effects */
+.glow-amber {
+  box-shadow: 0 0 20px 0px rgba(245, 158, 11, 0.15);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 20px 0px rgba(16, 185, 129, 0.15);
+}
+
 /* Animation blink cursor */
 @keyframes blink {
   0%, 100% { opacity: 1; }
@@ -38,4 +48,5 @@
 .cursor-blink {
   animation: blink 1s infinite;
 }
+
 

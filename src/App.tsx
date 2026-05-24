@@ -13,6 +13,7 @@ import FileWorkspace from './components/FileWorkspace';
 import SettingsPanel from './components/SettingsPanel';
 import CommandLinePreview from './components/CommandLinePreview';
 import ConsoleLogger from './components/ConsoleLogger';
+import LandingPage from './components/landing/LandingPage';
 
 // Helper to assemble mock initial videos
 const INITIAL_VIDEOS: VideoFile[] = [
@@ -52,7 +53,27 @@ const PRESET_TILES: Omit<VideoFile, 'id'>[] = [
   { name: 'drone_landscape_mountains.mov', duration: 18.0, size: 240.5, resolution: '3840x2160', fps: 59.94, codec: 'ProRes 422 HQ' },
 ];
 
-export default function App() {
+interface AppProps {
+  embedded?: boolean;
+}
+
+export default function App({ embedded = false }: AppProps) {
+  const [viewMode, setViewMode] = useState<'landing' | 'applet'>(() => {
+    if (embedded) return 'applet';
+    const isApplet = window.location.pathname.endsWith('/app.html') || window.location.search.includes('view=app');
+    return isApplet ? 'applet' : 'landing';
+  });
+
+  // Listen for history changes (e.g. back/forward navigation)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const isApplet = window.location.pathname.endsWith('/app.html') || window.location.search.includes('view=app');
+      setViewMode(isApplet ? 'applet' : 'landing');
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
   // State variables for core configurations
   const [videos, setVideos] = useState<VideoFile[]>(INITIAL_VIDEOS);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>('1');
@@ -311,14 +332,20 @@ export default function App() {
     logMessage('success', 'Generated Apple Silicon execution payload wrapper: assemble.sh. Check Downloads/ folder!');
   };
 
-  return (
-    <div className="min-h-screen bg-[#06080d] text-gray-200 font-mono flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white" id="main-tui-wrapper">
-      
+  const renderWorkspace = (isEmbedded: boolean) => (
+    <div 
+      className={
+        isEmbedded 
+          ? "w-full bg-[#0b101b] border border-amber-500/30 rounded-xl overflow-hidden shadow-2xl glow-amber flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white"
+          : "w-full flex flex-col space-y-4"
+      } 
+      id="main-tui-wrapper"
+    >
       {/* Visual background lines to amplify retro TUI / Terminal feel */}
-      <div className="absolute inset-x-0 top-0 h-1/2 pointer-events-none bg-gradient-to-b from-[#0e1628]/40 to-transparent"></div>
+      {isEmbedded && <div className="absolute inset-x-0 top-0 h-1/2 pointer-events-none bg-gradient-to-b from-[#0e1628]/40 to-transparent"></div>}
       
       {/* Main Container */}
-      <div className="w-full max-w-[1380px] mx-auto p-4 flex flex-col flex-1 z-10 space-y-4">
+      <div className={isEmbedded ? "w-full p-4 flex flex-col space-y-4" : "w-full flex flex-col flex-1 z-10 space-y-4"}>
         
         {/* Retro Header with status indicators */}
         <TerminalHeader
@@ -378,6 +405,28 @@ export default function App() {
           compileProgress={compileProgress}
         />
 
+      </div>
+    </div>
+  );
+
+  if (viewMode === 'landing') {
+    return (
+      <LandingPage onLaunchApplet={() => {
+        setViewMode('applet');
+        window.history.pushState({}, '', './app.html');
+      }}>
+        {renderWorkspace(true)}
+      </LandingPage>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#06080d] text-gray-200 font-mono flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white relative overflow-hidden" id="main-tui-fullscreen">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#111827_1px,transparent_1px),linear-gradient(to_bottom,#111827_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none opacity-40"></div>
+      <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-[100px] pointer-events-none"></div>
+      <div className="w-full max-w-[1380px] mx-auto p-4 flex flex-col flex-1 z-10 space-y-4">
+        {renderWorkspace(false)}
       </div>
     </div>
   );
