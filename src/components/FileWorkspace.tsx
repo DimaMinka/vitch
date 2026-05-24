@@ -15,11 +15,11 @@ interface FileWorkspaceProps {
 }
 
 const SAMPLE_PRESETS: Omit<VideoFile, 'id'>[] = [
-  { name: 'broll_shibuya_foggy_1080p.mov', duration: 12.4, size: 84.2, resolution: '1920x1080', fps: 29.97, codec: 'ProRes 422' },
-  { name: 'a_roll_speech_narration.mp4', duration: 45.1, size: 124.7, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
-  { name: 'broll_tokyo_underground_raw.mp4', duration: 8.3, size: 61.2, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
-  { name: 'drone_landscape_mountains.mov', duration: 18.0, size: 240.5, resolution: '3840x2160', fps: 59.94, codec: 'ProRes 422 HQ' },
-  { name: 'street_market_neon_night.mp4', duration: 14.5, size: 34.1, resolution: '1920x1080', fps: 24.00, codec: 'h265' },
+  { name: 'broll_shibuya_foggy_1080p.mov', duration: 12.4, size: 84.2, resolution: '1920x1080', fps: 29.97, codec: 'ProRes 422', hasAudio: true },
+  { name: 'a_roll_speech_narration.mp4', duration: 45.1, size: 124.7, resolution: '1920x1080', fps: 23.98, codec: 'h264', hasAudio: true },
+  { name: 'broll_tokyo_underground_raw.mp4', duration: 8.3, size: 61.2, resolution: '1920x1080', fps: 23.98, codec: 'h264', hasAudio: true },
+  { name: 'drone_landscape_mountains.mov', duration: 18.0, size: 240.5, resolution: '3840x2160', fps: 59.94, codec: 'ProRes 422 HQ', hasAudio: true },
+  { name: 'street_market_neon_night.mp4', duration: 14.5, size: 34.1, resolution: '1920x1080', fps: 24.00, codec: 'h265', hasAudio: true },
 ];
 
 export default function FileWorkspace({
@@ -206,6 +206,11 @@ export default function FileWorkspace({
                           <span className="text-blue-400 font-semibold">{video.resolution}</span>
                           <span className="text-gray-500">
                             {video.fps} FPS • <span className="uppercase text-gray-400 text-[9px]">{video.codec}</span>
+                            {video.hasAudio === false && (
+                              <span className="text-red-400 font-bold ml-1.5 text-[8px] border border-red-500/30 px-1 py-0.25 rounded bg-red-500/10 select-none">
+                                MUTED
+                              </span>
+                            )}
                           </span>
                         </div>
                       </td>

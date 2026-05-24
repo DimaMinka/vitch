@@ -6,6 +6,7 @@ export interface VideoFile {
   resolution: string;
   fps: number;
   codec: string;
+  hasAudio?: boolean;
 }
 
 export interface AudioTrack {

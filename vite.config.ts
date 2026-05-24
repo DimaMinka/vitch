@@ -10,14 +10,14 @@ function getMediaMetadata(filePath: string) {
     resolution: '1920x1080',
     fps: 24,
     codec: filePath.toLowerCase().endsWith('.mov') ? 'prores' : 'h264',
-    duration: 15.0
+    duration: 15.0,
+    hasAudio: true
   };
 
   try {
     const result = spawnSync('ffprobe', [
       '-v', 'error',
-      '-select_streams', 'v:0',
-      '-show_entries', 'stream=codec_name,width,height,avg_frame_rate,duration',
+      '-show_entries', 'stream=codec_name,codec_type,width,height,avg_frame_rate,duration',
       '-show_entries', 'format=duration',
       '-of', 'json',
       filePath
@@ -28,11 +28,12 @@ function getMediaMetadata(filePath: string) {
     }
     
     const metadata = JSON.parse(result.stdout);
-    const stream = metadata.streams?.[0] || {};
+    const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video') || {};
+    const hasAudio = metadata.streams?.some((s: any) => s.codec_type === 'audio') || false;
     const format = metadata.format || {};
     
     // 1. Duration
-    let duration = parseFloat(stream.duration || format.duration || '');
+    let duration = parseFloat(videoStream.duration || format.duration || '');
     if (isNaN(duration) || duration <= 0) {
       duration = defaults.duration;
     } else {
@@ -41,14 +42,14 @@ function getMediaMetadata(filePath: string) {
     
     // 2. Resolution
     let resolution = defaults.resolution;
-    if (stream.width && stream.height) {
-      resolution = `${stream.width}x${stream.height}`;
+    if (videoStream.width && videoStream.height) {
+      resolution = `${videoStream.width}x${videoStream.height}`;
     }
     
     // 3. FPS
     let fps = defaults.fps;
-    if (stream.avg_frame_rate && stream.avg_frame_rate !== '0/0') {
-      const parts = stream.avg_frame_rate.split('/');
+    if (videoStream.avg_frame_rate && videoStream.avg_frame_rate !== '0/0') {
+      const parts = videoStream.avg_frame_rate.split('/');
       if (parts.length === 2) {
         const num = parseFloat(parts[0]);
         const den = parseFloat(parts[1]);
@@ -59,7 +60,7 @@ function getMediaMetadata(filePath: string) {
     }
     
     // 4. Codec
-    let codec = stream.codec_name || defaults.codec;
+    let codec = videoStream.codec_name || defaults.codec;
     if (codec.toLowerCase().includes('prores')) {
       codec = 'prores';
     } else if (codec.toLowerCase().includes('hevc') || codec.toLowerCase().includes('h265')) {
@@ -68,7 +69,7 @@ function getMediaMetadata(filePath: string) {
       codec = 'h264';
     }
     
-    return { resolution, fps, codec, duration };
+    return { resolution, fps, codec, duration, hasAudio };
   } catch (e) {
     return defaults;
   }

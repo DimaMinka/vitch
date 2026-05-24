@@ -44,8 +44,7 @@ export function buildFfmpegCommand(
     
     if (audio.syncToVideo && audio.name !== 'None') {
       cmd += `ffmpeg -f concat -safe 0 -i mylist.txt -stream_loop -1 -i "${audio.name}" \\\n`;
-      cmd += `  -c:v copy -map 0:v -map 1:a -shortest \\\n`;
-      cmd += `  -vol ${Math.round(audio.volume * 256)} -y merged_output.mp4`;
+      cmd += `  -c:v copy -c:a aac -filter:a "volume=${audio.volume}" -map 0:v -map 1:a -shortest -y merged_output.mp4`;
     } else {
       cmd += `ffmpeg -f concat -safe 0 -i mylist.txt -c copy -y merged_output.mp4`;
     }
@@ -69,7 +68,10 @@ export function buildFfmpegCommand(
   if (audio.syncToVideo && audio.name !== 'None') {
     cmd += `  -map ${videos.length}:a \\\n`;
   } else {
-    cmd += `  -map "[a_out]" \\\n`;
+    const anyVideoHasAudio = videos.some(v => v.hasAudio !== false);
+    if (anyVideoHasAudio) {
+      cmd += `  -map "[a_out]" \\\n`;
+    }
   }
 
   // Codec specifics
@@ -108,11 +110,51 @@ function buildFilterComplex(
   });
 
   // 2. Concat the prepared clips
-  videos.forEach((_, index) => {
-    filter += `[v${index}][${index}:a]`;
-  });
+  const useBackgroundAudio = audio.syncToVideo && audio.name !== 'None';
   
-  filter += `concat=n=${videos.length}:v=1:a=1[v_concat][a_out]; `;
+  if (useBackgroundAudio) {
+    // Video only concat, since background audio is mapped separately
+    videos.forEach((_, index) => {
+      filter += `[v${index}]`;
+    });
+    filter += `concat=n=${videos.length}:v=1:a=0[v_concat]; `;
+  } else {
+    const audioStatus = videos.map(v => v.hasAudio !== false);
+    const anyVideoHasAudio = audioStatus.some(h => h);
+    const allVideosHaveAudio = audioStatus.every(h => h);
+    
+    if (!anyVideoHasAudio) {
+      // None of the videos have audio. Concat video only.
+      videos.forEach((_, index) => {
+        filter += `[v${index}]`;
+      });
+      filter += `concat=n=${videos.length}:v=1:a=0[v_concat]; `;
+    } else if (allVideosHaveAudio) {
+      // All videos have audio. Concat video and audio.
+      videos.forEach((_, index) => {
+        filter += `[v${index}][${index}:a]`;
+      });
+      filter += `concat=n=${videos.length}:v=1:a=1[v_concat][a_out]; `;
+    } else {
+      // Mixed: generate silent audio stream for videos lacking audio.
+      videos.forEach((video, index) => {
+        const hasAudio = video.hasAudio !== false;
+        if (!hasAudio) {
+          filter += `anullsrc=channel_layout=stereo:sample_rate=44100:duration=${video.duration}[a${index}_silent]; `;
+        }
+      });
+      
+      videos.forEach((video, index) => {
+        const hasAudio = video.hasAudio !== false;
+        if (hasAudio) {
+          filter += `[v${index}][${index}:a]`;
+        } else {
+          filter += `[v${index}][a${index}_silent]`;
+        }
+      });
+      filter += `concat=n=${videos.length}:v=1:a=1[v_concat][a_out]; `;
+    }
+  }
 
   // 3. Apply LUT filtering if active
   if (lut.active) {
@@ -315,8 +357,7 @@ ${
     echo -e "\${CYAN}Format: Lossless Stitching + Audio Music Sync/Loop\${NC}"
     log_info "Executing Lossless concat demuxer with audio mix"
     ffmpeg -f concat -safe 0 -i "\$MANIFEST_FILE" -stream_loop -1 -i "${audio.name}" \\
-      -c:v copy -map 0:v -map 1:a -shortest \\
-      -vol ${Math.round(audio.volume * 256)} -y "\$OUTPUT_NAME" >> "\$LOG_FILE" 2>&1
+      -c:v copy -c:a aac -filter:a "volume=${audio.volume}" -map 0:v -map 1:a -shortest -y "\$OUTPUT_NAME" >> "\$LOG_FILE" 2>&1
 else
     echo -e "\${CYAN}Format: Primary Lossless Stream Copy (Instant Concat)\${NC}"
     log_info "Executing instant dry demux stream copy"
@@ -331,9 +372,9 @@ fi`
     -map "[v_out]" \\
     ${
       audio.name !== 'None' && audio.syncToVideo
-        ? `-map ${videos.length}:a`
-        : `-map "[a_out]"`
-    } \\
+        ? `-map ${videos.length}:a \\`
+        : (videos.some(v => v.hasAudio !== false) ? `-map "[a_out]" \\` : '')
+    }
     -c:v ${config.outputCodec === 'prores' ? 'prores_ks' : config.outputCodec} \\
     ${
       config.outputCodec !== 'prores'

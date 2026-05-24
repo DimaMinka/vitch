@@ -25,6 +25,7 @@ const INITIAL_VIDEOS: VideoFile[] = [
     resolution: '1920x1080',
     fps: 23.98,
     codec: 'ProRes 422',
+    hasAudio: true,
   },
   {
     id: '2',
@@ -34,6 +35,7 @@ const INITIAL_VIDEOS: VideoFile[] = [
     resolution: '1920x1080',
     fps: 23.98,
     codec: 'h264',
+    hasAudio: true,
   },
   {
     id: '3',
@@ -43,14 +45,15 @@ const INITIAL_VIDEOS: VideoFile[] = [
     resolution: '3840x2160',
     fps: 29.97,
     codec: 'ProRes 422 HQ',
+    hasAudio: true,
   },
 ];
 
 const PRESET_TILES: Omit<VideoFile, 'id'>[] = [
-  { name: 'broll_shibuya_foggy_1080p.mov', duration: 12.4, size: 84.2, resolution: '1920x1080', fps: 29.97, codec: 'ProRes 422' },
-  { name: 'a_roll_speech_narration.mp4', duration: 45.1, size: 124.7, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
-  { name: 'broll_tokyo_underground_raw.mp4', duration: 8.3, size: 61.2, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
-  { name: 'drone_landscape_mountains.mov', duration: 18.0, size: 240.5, resolution: '3840x2160', fps: 59.94, codec: 'ProRes 422 HQ' },
+  { name: 'broll_shibuya_foggy_1080p.mov', duration: 12.4, size: 84.2, resolution: '1920x1080', fps: 29.97, codec: 'ProRes 422', hasAudio: true },
+  { name: 'a_roll_speech_narration.mp4', duration: 45.1, size: 124.7, resolution: '1920x1080', fps: 23.98, codec: 'h264', hasAudio: true },
+  { name: 'broll_tokyo_underground_raw.mp4', duration: 8.3, size: 61.2, resolution: '1920x1080', fps: 23.98, codec: 'h264', hasAudio: true },
+  { name: 'drone_landscape_mountains.mov', duration: 18.0, size: 240.5, resolution: '3840x2160', fps: 59.94, codec: 'ProRes 422 HQ', hasAudio: true },
 ];
 
 interface AppProps {
