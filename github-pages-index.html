@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitch — High-Performance macOS Terminal-styled Video Assembler</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #05070c;
+        }
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f1419;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #273746;
+            border-radius: 3px;
+        }
+        .cursor-blink {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen relative antialiased flex flex-col selection:bg-emerald-500/30 selection:text-white pb-12">
+
+    <!-- Ambient background glows -->
+    <div class="absolute inset-x-0 top-0 h-[600px] pointer-events-none bg-gradient-to-b from-[#111827]/40 via-[#0e1628]/10 to-transparent"></div>
+    <div class="absolute top-[150px] left-1/4 w-[350px] h-[350px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none"></div>
+    <div class="absolute top-[400px] right-1/4 w-[400px] h-[400px] rounded-full bg-indigo-500/5 blur-[150px] pointer-events-none"></div>
+
+    <!-- LANDING HEADER / NAVIGATION -->
+    <header class="w-full max-w-7xl mx-auto px-6 py-5 z-20 flex justify-between items-center select-none">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <i data-lucide="terminal" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-white text-lg font-black tracking-widest uppercase">Vitch</span>
+                    <span class="px-2 py-0.5 text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold uppercase tracking-widest rounded">v1.2</span>
+                </div>
+                <p class="text-[10px] text-gray-400 tracking-tight">Terminal Video Stitcher for macOS</p>
+            </div>
+        </div>
+
+        <nav class="hidden md:flex items-center space-x-8 text-xs font-semibold text-gray-300">
+            <a href="#features" class="hover:text-emerald-400 transition">Pipeline Specs</a>
+            <a href="#tui-simulator-widget" class="hover:text-emerald-400 transition">Online Workspace</a>
+            <a href="#terminal-runbook" class="hover:text-emerald-400 transition">macOS Scripting</a>
+            <a href="https://github.com" target="_blank" class="flex items-center space-x-1.5 hover:text-emerald-400 transition">
+                <i data-lucide="github" class="w-4 h-4"></i>
+                <span>Repository</span>
+            </a>
+        </nav>
+
+        <a href="#tui-simulator-widget" class="bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-extrabold px-4 py-2 rounded-lg text-xs tracking-wider uppercase transition shadow-lg shadow-emerald-500/10">
+            Launch Compiler
+        </a>
+    </header>
+
+    <!-- LANDING HERO SECTION -->
+    <section class="w-full max-w-5xl mx-auto px-6 text-center pt-16 pb-12 z-10 space-y-6">
+        <div class="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500/10 to-indigo-500/10 border border-emerald-500/20 hover:border-emerald-500/30 transition px-3 py-1.5 rounded-full text-xs text-gray-300 pointer-events-none">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 cursor-blink"></span>
+            <span class="font-mono font-medium text-[11px] uppercase tracking-wider text-emerald-400">Designed natively for POSIX & M1/M2/M3 Silicon</span>
+        </div>
+
+        <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-none uppercase">
+            Assemble Videos in macOS<br>
+            <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Instant, Lossless, and Cinematic</span>
+        </h1>
+
+        <p class="text-sm sm:text-base text-gray-400 max-w-2xl mx-auto font-normal leading-relaxed">
+            Stop waiting for heavy editing suites. Vitch combines video files in directories instantly using hardware-accelerated FFmpeg command structures. Apply 3D color LUTs, loop backtracks seamlessly, and generate compiled POSIX shell execution packages instantly.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <a href="#tui-simulator-widget" class="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-505 text-white font-bold rounded-lg text-sm uppercase transition flex items-center justify-center space-x-2 shadow-xl shadow-emerald-600/15">
+                <i data-lucide="play" class="w-4 h-4 fill-white text-white"></i>
+                <span>Use Interactive Workspace</span>
+            </a>
+            <a href="#terminal-runbook" class="w-full sm:w-auto px-6 py-3 bg-[#0d1527] hover:bg-[#121c33] border border-[#232f4c] text-sky-400 font-mono text-xs rounded-lg transition flex items-center justify-center space-x-2">
+                <span>$ chmod +x assemble.sh</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- CORE INTERACTIVE SANDBOX SIMULATOR WIDGET -->
+    <main class="w-full max-w-7xl mx-auto px-4 z-10" id="tui-simulator-widget">
+        <div class="border border-[#1e293b] bg-[#070b14]/90 rounded-2xl p-4 md:p-6 shadow-2xl space-y-4">
+            
+            <!-- Dashboard Info Headers Row -->
+            <div class="border-b border-[#2d3748] bg-[#0b0f19] p-4 font-mono select-none rounded-xl" id="tui-header">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                            <i data-lucide="terminal" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-white font-extrabold tracking-widest text-base">VITCH // TUI PIPELINE</span>
+                                <span class="px-1.5 py-0.5 text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded uppercase font-bold tracking-wider animate-pulse">macOS DARWIN</span>
+                            </div>
+                            <div class="text-[10px] text-gray-500 flex items-center gap-2">
+                                <span>v1.2.0-Darwin</span>
+                                <span>•</span>
+                                <span class="text-[#38bdf8] flex items-center gap-0.5">
+                                    <i data-lucide="shield" class="w-2.5 h-2.5"></i> Web Static Sandbox
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-[#0a0e17] border border-[#1a202c] rounded-lg px-4 py-2 text-xs text-gray-400">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="cpu" class="w-3.5 h-3.5 text-[#a855f7]"></i>
+                            <div>
+                                <p class="text-[9px] text-gray-500 uppercase leading-none">System</p>
+                                <p class="font-semibold text-gray-300">Apple Silicon</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-[#e11d48]"></i>
+                            <div>
+                                <p class="text-[9px] text-gray-500 uppercase leading-none">Queue Size</p>
+                                <p class="font-semibold text-gray-300" id="stat-total-files">3 Clips (55.1s)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-[#10b981]"></i>
+                            <div>
+                                <p class="text-[9px] text-gray-500 uppercase leading-none">Total Weight</p>
+                                <p class="font-semibold text-gray-300" id="stat-total-size">316.2 MB</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 cursor-blink"></span>
+                            <div>
+                                <p class="text-[9px] text-gray-500 uppercase leading-none">Runtime mode</p>
+                                <p class="font-mono text-[9px] text-[#38bdf8] leading-none mt-0.5">Web Sandbox</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Web Simulator Hotkeys -->
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-gray-400 border-t border-[#1a202c]/50 pt-2">
+                    <span class="text-gray-500 text-[10px] uppercase font-bold mr-1">Hotkeys (Global keyboard hook input):</span>
+                    <span class="px-1.5 py-0.5 bg-[#171e2e] border border-[#2d3748] rounded text-emerald-400 font-semibold text-[10px] mono-font">1-3</span>
+                    <span class="mr-3">Switch tabs</span>
+                    <span class="px-1.5 py-0.5 bg-[#171e2e] border border-[#2d3748] rounded text-emerald-400 font-semibold text-[10px] mono-font">A</span>
+                    <span class="mr-3">Add sample clip</span>
+                    <span class="px-1.5 py-0.5 bg-[#171e2e] border border-[#2d3748] rounded text-emerald-400 font-semibold text-[10px] mono-font">C</span>
+                    <span class="mr-3">Clear assembler</span>
+                    <span class="px-1.5 py-0.5 bg-[#171e2e] border border-[#2d3748] rounded text-emerald-400 font-semibold text-[10px] mono-font">R</span>
+                    <span class="mr-3">Stage Sim Render</span>
+                </div>
+            </div>
+
+            <!-- Pipeline Queue Config Grid Split -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+                
+                <!-- Left panel: Media queue -->
+                <div class="lg:col-span-6 flex flex-col h-full border border-[#2d3748] bg-[#0c101b] rounded-xl overflow-hidden">
+                    <div class="bg-[#111726]/80 p-3 border-b border-[#2d3748] flex justify-between items-center text-xs">
+                        <span class="text-emerald-400 uppercase font-extrabold flex items-center gap-1.5 font-mono">
+                            <i data-lucide="folder-open" class="w-4 h-4"></i> Directory Assembler Queue
+                        </span>
+                        <button onclick="preloadSampleClips()" class="px-2.5 py-1 text-[10px] bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 rounded hover:bg-indigo-500/25 transition">
+                            Preload Samples
+                        </button>
+                    </div>
+                    <!-- Path details display -->
+                    <div class="bg-[#080b12] px-3 py-1.5 border-b border-[#2d3748]/60 text-[10px] text-gray-400 font-mono">
+                        Scanning Root: <span class="text-[#38bdf8]">~/Movies/RawProjects/Vitch_Assemble/</span>
+                    </div>
+                    
+                    <!-- Table stream files list -->
+                    <div class="flex-1 overflow-y-auto custom-scrollbar h-[260px] font-mono" id="files-table-wrapper">
+                        <table class="w-full text-left text-xs text-gray-300">
+                            <thead>
+                                <tr class="bg-[#0c1221] border-b border-[#1c2436] text-[10px] text-gray-500 uppercase">
+                                    <th class="py-2 px-3 text-center w-8">#</th>
+                                    <th class="py-2 px-3">File Name</th>
+                                    <th class="py-2 px-2 text-right">Length</th>
+                                    <th class="py-2 px-2 text-right">Weight</th>
+                                    <th class="py-2 px-3">Specs</th>
+                                    <th class="py-2.5 px-3 text-center w-10">Del</th>
+                                </tr>
+                            </thead>
+                            <tbody id="files-list-tbody" class="divide-y divide-[#182235]/40">
+                                <!-- JS mapped entries go here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Input custom manual form -->
+                    <div class="border-t border-[#2d3748] bg-[#090d16] p-3 text-xs font-mono">
+                        <div class="text-[10px] uppercase font-bold text-gray-400 mb-2 tracking-wide">Manual File Input Simulator</div>
+                        <form onsubmit="handleManualAdd(event)" class="space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-500 block mb-0.5">Custom Filename</label>
+                                    <input type="text" id="input-filename" placeholder="e.g. sunset_clip_4k" required class="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1.5 text-gray-200 outline-none focus:border-emerald-500 text-[11px]">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-500 block mb-0.5">Resolution conform</label>
+                                    <select id="input-resolution" class="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1.5 text-gray-200 outline-none text-[11px]">
+                                        <option value="1920x1080">1920x1080 (HD 1080)</option>
+                                        <option value="3840x2160">3840x2160 (4K UHD)</option>
+                                        <option value="1280x720">1280x720 (720p)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-500 block mb-0.5">Duration (seconds)</label>
+                                    <input type="number" step="0.1" id="input-duration" value="15.0" class="w-full bg-[#05080e] border border-[#2d3748] text-center rounded px-2 py-1 text-gray-200 text-[11px]">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-500 block mb-0.5">Size (MB)</label>
+                                    <input type="number" step="0.1" id="input-size" value="65.4" class="w-full bg-[#05080e] border border-[#2d3748] text-center rounded px-2 py-1 text-gray-200 text-[11px]">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-500 block mb-0.5">Codec Format</label>
+                                    <select id="input-codec" class="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 class py-1 text-gray-200 text-[11px]">
+                                        <option value="ProRes 422">ProRes 422</option>
+                                        <option value="h264">H.264 (MP4)</option>
+                                        <option value="h265">HEVC (H.265)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white rounded font-bold uppercase text-[10px] tracking-wider transition">
+                                Stitch Segment to Active Queue
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right panel: Interactive FFmpeg Settings Hub -->
+                <div class="lg:col-span-6 flex flex-col h-full border border-[#2d3748] bg-[#0c101b] rounded-xl overflow-hidden min-h-[460px]">
+                    <!-- Tabs selection headers -->
+                    <div class="bg-[#111726]/80 flex border-b border-[#2d3748] items-center justify-between p-1 text-xs font-mono">
+                        <div class="flex space-x-1">
+                            <button onclick="switchTab(1)" id="tab-btn-1" class="px-3 py-1.5 rounded font-bold bg-[#1a2336] border border-[#2d3748] text-white">
+                                [1: FFmpeg Options]
+                            </button>
+                            <button onclick="switchTab(2)" id="tab-btn-2" class="px-3 py-1.5 rounded font-bold text-gray-400 hover:text-gray-250">
+                                [2: Color LUT]
+                            </button>
+                            <button onclick="switchTab(3)" id="tab-btn-3" class="px-3 py-1.5 rounded font-bold text-gray-400 hover:text-gray-250">
+                                [3: Audio Sync]
+                            </button>
+                        </div>
+                        <button onclick="compilePipelineNow()" class="px-3 py-1 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-extrabold rounded text-[10px] uppercase transition flex items-center space-x-1 shadow-lg shadow-emerald-500/10">
+                            <i data-lucide="play" class="w-2.5 h-2.5"></i> <span>Compile</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab items frame container -->
+                    <div class="flex-1 p-4 overflow-y-auto custom-scrollbar text-xs text-gray-300 space-y-4" id="right-panels-wrapper">
+                        
+                        <!-- TAB 1 CONTENT -->
+                        <div id="tab-panel-1" class="space-y-4 font-mono">
+                            <div class="border border-[#1e293b] bg-[#070b12] p-3 rounded-lg">
+                                <h3 class="text-white font-bold mb-1 flex items-center gap-1.5 text-xs uppercase text-emerald-400">
+                                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span> Video Stitching Strategy
+                                </h3>
+                                <p class="text-[10px] text-gray-400 leading-relaxed mb-3">
+                                    Select stream copy logic. Lossless copy maintains 100% video source bitstreams without re-encoding but requires identical resolution and frame rates.
+                                </p>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div onclick="toggleCodecCopy('copy')" id="option-copy" class="border p-2.5 rounded cursor-pointer transition flex flex-col justify-between border-emerald-500 bg-emerald-500/5 text-emerald-300">
+                                        <div class="font-bold flex items-center justify-between">
+                                            <span>Lossless Copy</span>
+                                            <span class="px-1 text-[8px] bg-emerald-500/20 text-emerald-400 rounded">0% Recode</span>
+                                        </div>
+                                        <span class="text-[9px] text-gray-500 mt-1 uppercase font-semibold leading-tight">Instant Concat (-c copy). No alterations allowed.</span>
+                                    </div>
+                                    <div onclick="toggleCodecCopy('libx264')" id="option-transcode" class="border p-2.5 rounded cursor-pointer transition flex flex-col justify-between border-[#2d3748] text-gray-400">
+                                        <div class="font-bold flex items-center justify-between">
+                                            <span>Graded Transcode</span>
+                                            <span class="px-1 text-[8px] bg-indigo-500/20 text-indigo-400 rounded">On-the-fly Filter</span>
+                                        </div>
+                                        <span class="text-[9px] text-gray-500 mt-1 uppercase font-semibold leading-tight">Apply Look Up Tables, conforming scale size, custom sound loop filters.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Config items for transcoding -->
+                            <div id="transcode-advanced-configs" class="border border-[#1e293b] bg-[#070b12] p-4 rounded-lg space-y-3 hidden">
+                                <h3 class="text-[#38bdf8] font-bold text-xs uppercase flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-[#38bdf8] rounded-full"></span> Quality Parameters
+                                </h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 block mb-0.5">Target Video Codec</label>
+                                        <select id="config-codec-val" onchange="updateFfmpegConfig()" class="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1.5 text-gray-200 text-[11px]">
+                                            <option value="libx264">H.264 High Profile (libx264)</option>
+                                            <option value="libx265">H.265 Space Save (libx265)</option>
+                                            <option value="prores">Apple ProRes 422 HQ (prores_ks)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-gray-500 block mb-0.5">FFmpeg Preset Speed</label>
+                                        <select id="config-preset-val" onchange="updateFfmpegConfig()" class="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1.5 text-gray-200 text-[11px]">
+                                            <option value="ultrafast">Ultrafast (Draft)</option>
+                                            <option value="medium" selected>Medium (Standard Bal)</option>
+                                            <option value="slow">Slow (Max Density)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-center text-[9px] mb-1">
+                                        <span>CRF (Constant Rate Factor)</span>
+                                        <span id="crf-number-display" class="text-indigo-400 font-bold">23</span>
+                                    </div>
+                                    <input type="range" min="0" max="51" value="23" id="config-crf-val" oninput="updateFfmpegConfig()" class="w-full h-1 bg-[#20293d] rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2 CONTENT -->
+                        <div id="tab-panel-2" class="space-y-4 hidden font-mono">
+                            <div class="border border-[#1e293b] bg-[#070b12] p-3 rounded-lg">
+                                <h3 class="text-white font-bold mb-1 flex items-center gap-1.5 text-xs uppercase text-amber-500">
+                                    <i data-lucide="palette" class="w-3.5 h-3.5"></i> LUT Filter Gradings
+                                </h3>
+                                <p class="text-[10px] text-gray-400 leading-relaxed mb-3">
+                                    Inject a Cinematic color grading template directly to the processing script. (Applies Tetrahedral interpolation algorithm inside FFmpeg wrapper on Darwin runtimes).
+                                </p>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div onclick="toggleLutActive(true, 'hollywood_teal_orange_3d.cube', 'teal_orange')" id="lut-teal" class="border border-amber-500 bg-amber-500/5 p-2 rounded cursor-pointer transition">
+                                        <p class="font-bold text-[10px] text-amber-400">Teal & Orange Blockbuster</p>
+                                        <span class="text-[8px] text-gray-500">hollywood_teal_orange_3d.cube</span>
+                                    </div>
+                                    <div onclick="toggleLutActive(true, 'kodak_portra_400_warm.cube', 'kodak')" id="lut-kodak" class="border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition">
+                                        <p class="font-bold text-[10px] text-gray-300">Kodak Warm Portra 400</p>
+                                        <span class="text-[8px] text-gray-500">kodak_portra_400_warm.cube</span>
+                                    </div>
+                                    <div onclick="toggleLutActive(true, 'cyberpunk_neon_noir_synth.cube', 'cyberpunk')" id="lut-cyberpunk" class="border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition">
+                                        <p class="font-bold text-[10px] text-gray-300">Cyberpunk Neo Neon</p>
+                                        <span class="text-[8px] text-gray-500">cyberpunk_neo_noir.cube</span>
+                                    </div>
+                                    <div onclick="toggleLutActive(false, '', 'none')" id="lut-none" class="border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition">
+                                        <p class="font-bold text-[10px] text-gray-400">Bypass / Original Color</p>
+                                        <span class="text-[8px] text-gray-500">No grading active</span>
+                                    </div>
+                                </div>
+
+                                <!-- Grade blend factor slider -->
+                                <div class="mt-3 bg-[#111726]/80 p-3 rounded border border-[#2d3748]/30 space-y-2" id="lut-slider-wrapper">
+                                    <div class="flex justify-between text-[10px] uppercase font-bold text-gray-400 font-mono">
+                                        <span>LUT Mix intensity</span>
+                                        <span id="lut-mix-display" class="text-amber-400">80%</span>
+                                    </div>
+                                    <input type="range" min="0" max="1" step="0.05" value="0.8" id="config-lut-intensity" oninput="updateFfmpegConfig()" class="w-full h-1 bg-[#1e293b] rounded-lg appearance-none cursor-pointer accent-amber-500">
+                                </div>
+                            </div>
+
+                            <!-- Mock split visualizer -->
+                            <div class="border border-[#1e293b] bg-[#070b12] p-3 rounded-lg">
+                                <h4 class="text-[10px] uppercase text-gray-500 font-extrabold mb-1.5">Simulated Output Split Screen</h4>
+                                <div class="aspect-video rounded-lg relative overflow-hidden flex bg-black items-center border border-gray-800">
+                                    <div class="w-1/2 h-full bg-gradient-to-tr from-[#151c27] to-[#1e2836] flex items-end p-2 text-[8px] text-gray-400 border-r border-[#10b981]/50 shadow-[rgba(16,185,129,0.1)_10px_0_15px]">ORIGINAL RAW</div>
+                                    <div class="w-1/2 h-full bg-gradient-to-tr from-[#162a3f] to-[#e4a054]/20 flex items-end justify-end p-2 text-[8px] text-amber-400 font-bold" id="preview-lut-box-title">TEAL & ORANGE COMPACT SPLIT</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3 CONTENT -->
+                        <div id="tab-panel-3" class="space-y-4 hidden font-mono">
+                            <div class="border border-[#1e293b] bg-[#070b12] p-3 rounded-lg space-y-3 animate-fade-in">
+                                <h3 class="text-white font-bold mb-1 flex items-center gap-1.5 text-xs uppercase text-indigo-400">
+                                    <i data-lucide="music-4" class="w-3.5 h-3.5"></i> Audio Track Stitch Options
+                                </h3>
+                                <p class="text-[10px] text-gray-400 leading-relaxed">
+                                    Choose an audio accompaniment track to merge or loop continuously over video clips elements. We loop with dynamic script modifiers to avoid premature silence cutouts.
+                                </p>
+
+                                <div class="bg-[#131929]/80 p-3 rounded border border-indigo-500/20 space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <span>🎵</span>
+                                            <div>
+                                                <p class="font-bold text-gray-200" id="audio-filename-display">cinematic_ambience.flac</p>
+                                                <p class="text-[8px] text-[#805ad5] uppercase leading-none font-bold">Continuous looping active</p>
+                                            </div>
+                                        </div>
+                                        <button onclick="clearAudioTrack()" class="px-2 py-0.5 bg-red-500/10 border border-red-500/30 text-red-300 rounded text-[9px]">
+                                            Clear Track
+                                        </button>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between items-center text-[9px]">
+                                            <span>Mixer Master gain</span>
+                                            <span id="audio-vol-display" class="text-indigo-300">60%</span>
+                                        </div>
+                                        <input type="range" min="0" max="1" step="0.05" value="0.6" id="config-audio-vol" oninput="updateFfmpegConfig()" class="w-full h-1 bg-[#1e293b] rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                                    </div>
+                                </div>
+
+                                <!-- Custom sound path input -->
+                                <div>
+                                    <label class="text-[9px] text-gray-500 block mb-1 uppercase font-semibold">Stage Custom Backtrack Path</label>
+                                    <div class="flex space-x-1">
+                                        <input type="text" id="custom-audio-path-val" placeholder="~/Sounds/scores/epic_synth.flac" class="flex-1 bg-[#05080e] border border-[#2d3748] rounded px-2 py-1 text-gray-200 outline-none text-[11px]">
+                                        <button type="button" onclick="stageCustomAudioTrack()" class="px-3 bg-[#4c1d95] text-[#d8b4fe] border border-[#6b21a8] rounded font-bold text-[10px] uppercase">Stage</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pre-rendered custom executable display statement CLI -->
+            <div class="border border-[#2d3748] bg-[#070b12] rounded-xl overflow-hidden flex flex-col font-mono text-xs select-none" id="cmd-preview">
+                <div class="bg-[#111726]/80 px-4 py-2 border-b border-[#2d3748] flex justify-between items-center">
+                    <span class="text-xs text-sky-400 font-extrabold uppercase tracking-wide flex items-center gap-1.5 font-mono">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5"></i> Live macOS Compiled Command
+                    </span>
+                    <button onclick="copyCommandStatement()" class="px-3 py-1 text-[10px] bg-gray-800 border border-gray-700 text-gray-300 rounded hover:bg-gray-750 font-bold transition">
+                        Copy to Clipboard
+                    </button>
+                </div>
+                <div class="p-3 bg-black/95 overflow-x-auto min-h-[140px] max-h-[220px] custom-scrollbar text-emerald-400 text-[11px] h-full font-mono">
+                    <pre id="cli-command-block" class="whitespace-pre select-text text-left"># Append clips above to generate FFmpeg commands</pre>
+                </div>
+            </div>
+
+            <!-- Dynamic Simulator Render Console Terminal -->
+            <div class="border border-[#2d3748] bg-[#02050a] rounded-xl overflow-hidden flex flex-col font-mono text-[11px] h-full" id="console-logger">
+                <div class="bg-[#0b0e14] px-4 py-2.5 border-b border-[#2d3748] flex justify-between items-center text-xs select-none">
+                    <span class="text-emerald-400 uppercase font-extrabold flex items-center gap-1.5">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5 animate-pulse"></i> macOS Process Terminal Logs Simulator
+                    </span>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="downloadAssembleScript()" class="p-1 px-3 text-[10px] bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 rounded hover:bg-emerald-600/25 transition flex items-center space-x-1.5 font-extrabold">
+                            <i data-lucide="download" class="w-3 h-3"></i> <span>Download `assemble.sh`</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scrollable list of simulator entries -->
+                <div class="p-4 overflow-y-auto custom-scrollbar bg-black/95 text-gray-400 min-h-[160px] font-mono leading-relaxed space-y-1 max-h-[250px]" id="logs-container-stream">
+                    <div class="text-gray-600 text-[10px] border-b border-[#111c2e]/70 pb-2 mb-2">
+                        <p>Last login: Wed May 24 on ttys001</p>
+                        <p class="text-emerald-500/60 font-semibold mt-0.5">✔ Host architecture verified (macOS Darwin Apple Silicon M-series)</p>
+                    </div>
+                </div>
+
+                <!-- Execution instructions banner footer -->
+                <div class="border-t border-[#2d3748] bg-[#0c1221] px-4 py-3 text-xs text-gray-400 flex flex-col md:flex-row md:items-center justify-between gap-3 font-mono">
+                    <div class="flex items-center space-x-2 select-none">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                        <p class="text-[10px] leading-relaxed max-w-[500px]">
+                            To execute natively on macOS, click <b class="text-emerald-400">Download assemble.sh</b>, move file to movie folder, open native macOS terminal and run: <code class="bg-black border border-gray-800 px-1 py-0.5 rounded text-sky-400 font-bold select-all">chmod +x assemble.sh && ./assemble.sh</code>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- PIPELINE SPECIFICATIONS & CORE FEATURES INDEX -->
+    <section class="w-full max-w-7xl mx-auto px-6 py-20 z-10" id="features">
+        <div class="text-center space-y-2 mb-12">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-[#38bdf8]">System Engineering Specs</h2>
+            <p class="text-2xl sm:text-3xl font-extrabold text-white">Configured for High Throughput Outputs</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="border border-[#1a2235] bg-[#0c101b]/80 p-6 rounded-xl space-y-3">
+                <div class="w-10 h-10 rounded-lg bg-[#a855f7]/10 flex items-center justify-center text-[#a855f7]">
+                    <i data-lucide="zap" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-white font-bold text-base">Instant Lossless Stream Copy</h3>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    Uses FFmpeg’s high-velocity concate demux logic to instantly copy audio and video packets without a single byte of decoding, reducing render time to zero while retaining 100% of original fidelity.
+                </p>
+            </div>
+
+            <div class="border border-[#1a2235] bg-[#0c101b]/80 p-6 rounded-xl space-y-3">
+                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+                    <i data-lucide="palette" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-white font-bold text-base">Tetrahedral LUT Interpolations</h3>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    Processes on-the-fly cinematic conversions to Rec.709 or custom film spaces. Fully supports 3D LUT look-up filters without quality loss or highlight banding artefacts.
+                </p>
+            </div>
+
+            <div class="border border-[#1a2235] bg-[#0c101b]/80 p-6 rounded-xl space-y-3">
+                <div class="w-10 h-10 rounded-lg bg-[#38bdf8]/10 flex items-center justify-center text-[#38bdf8]">
+                    <i data-lucide="volume-2" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-white font-bold text-base">Looped Backtrack Multi-Pads</h3>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    Mount custom high fidelity stereo scores (`.wav` or `.flac`) that sync perfectly. Automatically loops small tracks continuously and closes them instantly the moment video renders finish.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- MACOS TERMINAL RUNBOOK -->
+    <section class="w-full max-w-4xl mx-auto px-6 py-8 z-10" id="terminal-runbook">
+        <div class="border border-[#1e293b] bg-black/60 rounded-xl p-6 space-y-4">
+            <h3 class="text-white font-extrabold text-lg flex items-center gap-2">
+                <i data-lucide="terminal" class="w-5 h-5 text-emerald-400"></i>
+                <span>Local macOS execution instructions</span>
+            </h3>
+            <p class="text-xs text-gray-400 leading-relaxed">
+                After configuring your script on Vitch, write it directly into your movie directory using the following terminal procedure to initiate high-speed rendering:
+            </p>
+
+            <div class="bg-black p-4 rounded-lg border border-gray-800 font-mono text-[11px] text-sky-400 leading-relaxed space-y-2 select-all">
+                <div># 1. Open Terminal.app and switch directory to your Movie folder:</div>
+                <div class="text-white font-bold">cd ~/Movies/RawProjects/SummerHolidays/</div>
+                <div class="mt-3"># 2. Make downloaded file 'assemble.sh' an executable script:</div>
+                <div class="text-white font-bold">chmod +x ~/Downloads/assemble.sh && mv ~/Downloads/assemble.sh .</div>
+                <div class="mt-3"># 3. Fire the FFmpeg Vitch pipeline compiler:</div>
+                <div class="text-emerald-400 font-extrabold">./assemble.sh</div>
+            </div>
+
+            <p class="text-[10px] text-gray-500 italic">
+                Note: Vitch targets system package paths on Darwin platforms and automatically builds homebrew dependencies if warning indicators trigger during startup.
+            </p>
+        </div>
+    </section>
+
+    <!-- LANDING FOOTER -->
+    <footer class="w-full max-w-7xl mx-auto px-6 mt-20 pt-10 border-t border-[#1a2235] text-xs text-gray-500 select-none z-10 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-300 font-extrabold tracking-widest text-[11px] uppercase">Vitch</span>
+                <span>•</span>
+                <span>POSIX macOS Video Automation Tool</span>
+            </div>
+            <p class="text-[10px] text-gray-600 mt-1">MIT License. Designed with high contrast dark workspaces for professional sessions.</p>
+        </div>
+
+        <div class="flex space-x-6 text-gray-400">
+            <a href="#tui-simulator-widget" class="hover:text-white transition">Workspace</a>
+            <a href="#features" class="hover:text-white transition">Features</a>
+            <a href="https://github.com" target="_blank" class="hover:text-white transition">Slices Repository</a>
+        </div>
+    </footer>
+
+
+    <script>
+        // Init Web Sandbox state variables
+        let filesQueue = [
+            { id: '1', name: 'clip_01_tokyo_broll.mov', duration: 15.2, size: 94.6, resolution: '1920x1080', fps: 23.98, codec: 'ProRes 422' },
+            { id: '2', name: 'clip_02_narrator_intro.mp4', duration: 28.5, size: 61.2, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
+            { id: '3', name: 'clip_03_temple_sunset.mov', duration: 11.4, size: 160.4, resolution: '3840x2160', fps: 29.97, codec: 'ProRes 422 HQ' }
+        ];
+
+        let configCodec = 'libx264';
+        let configPreset = 'medium';
+        let configCrf = 23;
+        
+        let lutActive = true;
+        let lutFileName = 'hollywood_teal_orange_3d.cube';
+        let lutPresetId = 'teal_orange';
+        let lutIntensity = 0.8;
+
+        let audioName = 'cinematic_ambience.flac';
+        let audioVolume = 0.6;
+
+        let activeTabNum = 1;
+
+        // Load document
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            updateUILayout();
+            logText('info', 'Sandbox TUI pipeline initialized successfully inside web browser.');
+        });
+
+        // Logger helper
+        function logText(type, text) {
+            const timeStr = new Date().toTimeString().split(' ')[0];
+            const logContainer = document.getElementById('logs-container-stream');
+            if(!logContainer) return;
+
+            let badgeColor = 'text-cyan-400';
+            if (type === 'success') badgeColor = 'text-emerald-400 font-bold';
+            if (type === 'warn') badgeColor = 'text-amber-500 font-bold';
+            if (type === 'error') badgeColor = 'text-red-500 font-bold';
+            
+            const logRow = document.createElement('div');
+            logRow.className = 'flex hover:bg-[#111827]/40 py-0.5 px-1 rounded transition-colors';
+            logRow.innerHTML = `
+                <span class="text-gray-600 text-[9px] mr-2.5 select-none">${timeStr}</span>
+                <span class="mr-2 font-bold select-none ${badgeColor}">[${type.toUpperCase()}]</span>
+                <span class="flex-1 break-all">${text}</span>
+            `;
+            logContainer.appendChild(logRow);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Preload sample clips
+        function preloadSampleClips() {
+            filesQueue = [
+                { id: '1', name: 'broll_shibuya_foggy_1080p.mov', duration: 12.4, size: 84.2, resolution: '1920x1080', fps: 29.97, codec: 'ProRes 422' },
+                { id: '2', name: 'a_roll_speech_narration.mp4', duration: 45.1, size: 124.7, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
+                { id: '3', name: 'broll_tokyo_underground_raw.mp4', duration:  8.3, size: 61.2, resolution: '1920x1080', fps: 23.98, codec: 'h264' },
+                { id: '4', name: 'drone_landscape_mountains.mov', duration: 18.0, size: 240.5, resolution: '3840x2160', fps: 59.94, codec: 'ProRes 422 HQ' }
+            ];
+            updateUILayout();
+            logText('success', 'Workspace folder scanned. Loaded 4 high-fidelity macOS source segments.');
+        }
+
+        // Add custom file manually
+        function handleManualAdd(e) {
+            e.preventDefault();
+            const inputName = document.getElementById('input-filename').value.trim();
+            const res = document.getElementById('input-resolution').value;
+            const duration = parseFloat(document.getElementById('input-duration').value) || 10;
+            const size = parseFloat(document.getElementById('input-size').value) || 50;
+            const codec = document.getElementById('input-codec').value;
+
+            if (!inputName) return;
+
+            filesQueue.push({
+                id: Date.now().toString(),
+                name: inputName.includes('.') ? inputName : inputName + '.mp4',
+                duration,
+                size,
+                resolution: res,
+                fps: 24,
+                codec
+            });
+
+            document.getElementById('input-filename').value = '';
+            updateUILayout();
+            logText('info', `Successfully appended manually staged movie block: ${inputName}`);
+        }
+
+        // Delete item
+        function deleteFileItem(id, name) {
+            filesQueue = filesQueue.filter(f => f.id !== id);
+            updateUILayout();
+            logText('warn', `Removed clip path from timeline sequence: ${name}`);
+        }
+
+        // Switch panel tabs
+        function switchTab(num) {
+            activeTabNum = num;
+            document.getElementById('tab-btn-1').className = num === 1 ? 'px-3 py-1.5 rounded font-bold bg-[#1a2336] border border-[#2d3748] text-white' : 'px-3 py-1.5 rounded font-bold text-gray-400 hover:text-gray-200';
+            document.getElementById('tab-btn-2').className = num === 2 ? 'px-3 py-1.5 rounded font-bold bg-[#1a2336] border border-[#2d3748] text-white' : 'px-3 py-1.5 rounded font-bold text-gray-400 hover:text-gray-200';
+            document.getElementById('tab-btn-3').className = num === 3 ? 'px-3 py-1.5 rounded font-bold bg-[#1a2336] border border-[#2d3748] text-white' : 'px-3 py-1.5 rounded font-bold text-gray-400 hover:text-gray-200';
+
+            document.getElementById('tab-panel-1').className = num === 1 ? 'space-y-4' : 'space-y-4 hidden';
+            document.getElementById('tab-panel-2').className = num === 2 ? 'space-y-4 font-mono' : 'space-y-4 hidden';
+            document.getElementById('tab-panel-3').className = num === 3 ? 'space-y-4 font-mono' : 'space-y-4 hidden';
+        }
+
+        // Toggle code option
+        function toggleCodecCopy(mode) {
+            configCodec = mode;
+            if (mode === 'copy') {
+                document.getElementById('option-copy').className = 'border p-2.5 rounded cursor-pointer transition flex flex-col justify-between border-emerald-500 bg-emerald-500/5 text-emerald-300';
+                document.getElementById('option-transcode').className = 'border p-2.5 rounded cursor-pointer transition flex flex-col justify-between border-[#2d3748] text-gray-400';
+                document.getElementById('transcode-advanced-configs').classList.add('hidden');
+                logText('info', 'Enabled instant lossless demuxer concatenate mode.');
+            } else {
+                document.getElementById('option-copy').className = 'border p-2.5 rounded cursor-pointer transition flex flex-col justify-between border-[#2d3748] text-gray-400';
+                document.getElementById('option-transcode').className = 'border p-2.5 rounded cursor-pointer transition flex flex-col justify-between border-indigo-500 bg-indigo-500/5 text-indigo-300';
+                document.getElementById('transcode-advanced-configs').classList.remove('hidden');
+                logText('info', 'Enabled on-the-fly filtering. FFmpeg will decode and apply matrices.');
+            }
+            updateUILayout();
+        }
+
+        // Config updates
+        function updateFfmpegConfig() {
+            if (configCodec !== 'copy') {
+                configCodec = document.getElementById('config-codec-val').value;
+                configPreset = document.getElementById('config-preset-val').value;
+                configCrf = document.getElementById('config-crf-val').value;
+                document.getElementById('crf-number-display').innerText = configCrf;
+            }
+
+            lutIntensity = parseFloat(document.getElementById('config-lut-intensity').value) || 0.8;
+            document.getElementById('lut-mix-display').innerText = Math.round(lutIntensity * 100) + '%';
+
+            audioVolume = parseFloat(document.getElementById('config-audio-vol').value) || 0.6;
+            document.getElementById('audio-vol-display').innerText = Math.round(audioVolume * 100) + '%';
+
+            updateUILayout();
+        }
+
+        // LUT active modifiers
+        function toggleLutActive(active, filename, presetId) {
+            lutActive = active;
+            lutFileName = filename;
+            lutPresetId = presetId;
+
+            document.getElementById('lut-teal').className = presetId === 'teal_orange' ? 'border border-amber-500 bg-amber-500/5 p-2 rounded cursor-pointer transition' : 'border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition';
+            document.getElementById('lut-kodak').className = presetId === 'kodak' ? 'border border-amber-500 bg-amber-500/5 p-2 rounded cursor-pointer transition' : 'border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition';
+            document.getElementById('lut-cyberpunk').className = presetId === 'cyberpunk' ? 'border border-amber-500 bg-amber-500/5 p-2 rounded cursor-pointer transition' : 'border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition';
+            document.getElementById('lut-none').className = presetId === 'none' ? 'border border-amber-500 bg-amber-500/5 p-2 rounded cursor-pointer transition' : 'border border-[#1e293b] bg-[#0c1221] p-2 rounded cursor-pointer transition';
+
+            if (active) {
+                document.getElementById('lut-slider-wrapper').classList.remove('opacity-40');
+                document.getElementById('config-lut-intensity').disabled = false;
+                document.getElementById('preview-lut-box-title').innerText = presetId.toUpperCase() + " ACTIVE SPLIT";
+                logText('info', `Color grading algorithm changed to: ${presetId}`);
+            } else {
+                document.getElementById('lut-slider-wrapper').classList.add('opacity-40');
+                document.getElementById('config-lut-intensity').disabled = true;
+                document.getElementById('preview-lut-box-title').innerText = "GRADING BYPASSED";
+                logText('warn', 'Color grading disabled. Simple frame duplication staging.');
+            }
+
+            updateUILayout();
+        }
+
+        // Sync Audio helpers
+        function clearAudioTrack() {
+            audioName = "None";
+            document.getElementById('audio-filename-display').innerText = "Bypassed / Ignored";
+            logText('warn', 'Background soundtrack track cleared.');
+            updateUILayout();
+        }
+
+        function stageCustomAudioTrack() {
+            const val = document.getElementById('custom-audio-path-val').value.trim();
+            if (!val) return;
+            audioName = val.split('/').pop();
+            document.getElementById('audio-filename-display').innerText = audioName;
+            logText('success', `Audio backtrack staged manually: ${val}`);
+            document.getElementById('custom-audio-path-val').value = '';
+            updateUILayout();
+        }
+
+        // core formula render CLI representation
+        function updateUILayout() {
+            // Stats updates
+            const clipCount = filesQueue.length;
+            const durationSum = filesQueue.reduce((acc, f) => acc + f.duration, 0);
+            const sizeSum = filesQueue.reduce((acc, f) => acc + f.size, 0);
+
+            document.getElementById('stat-total-files').innerText = `${clipCount} Clips (${durationSum.toFixed(1)}s)`;
+            document.getElementById('stat-total-size').innerText = `${sizeSum.toFixed(1)} MB`;
+
+            // Draw table
+            const tbody = document.getElementById('files-list-tbody');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            if (filesQueue.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-gray-600 italic">
+                            Workspace folder empty. Hit 'Preload Stock Samples' above.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                filesQueue.forEach((file, index) => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-[#111726]/40 transition';
+                    row.innerHTML = `
+                        <td class="py-2.5 px-3 text-center font-bold text-gray-500">${String(index + 1).padStart(2, '0')}</td>
+                        <td class="py-2.5 px-3 font-semibold text-gray-200">${file.name}</td>
+                        <td class="py-2.5 px-2 text-right text-emerald-400 font-bold">${file.duration.toFixed(1)}s</td>
+                        <td class="py-2.5 px-2 text-right text-gray-400">${file.size.toFixed(1)} MB</td>
+                        <td class="py-2.5 px-3 text-cyan-400 text-[10px]">${file.resolution} • <span class="uppercase text-gray-500">${file.codec}</span></td>
+                        <td class="py-2.5 px-3 text-center">
+                            <button onclick="deleteFileItem('${file.id}', '${file.name}')" class="text-red-400 hover:text-red-300 text-[10px] font-bold">✖</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Compile FFmpeg code block
+            const cmdBlock = document.getElementById('cli-command-block');
+            if(!cmdBlock) return;
+            if (filesQueue.length === 0) {
+                cmdBlock.innerText = '# Queue is empty. Add elements above to generate FFmpeg commands.';
+                return;
+            }
+
+            let code = '';
+            const isCopy = configCodec === 'copy' && !lutActive;
+
+            if (isCopy) {
+                code += '# Step 1: Write file listing parameter to disk\n';
+                code += `printf "file '%s'\\n" ` + filesQueue.map(f => f.name).join(' ') + ' > mylist.txt\n\n';
+                code += '# Step 2: Concat losslessly without rendering\n';
+                if (audioName !== 'None') {
+                    code += `ffmpeg -f concat -safe 0 -i mylist.txt -stream_loop -1 -i "${audioName}" \\\n`;
+                    code += `  -c:v copy -map 0:v -map 1:a -shortest \\\n`;
+                    code += `  -vol ${Math.round(audioVolume * 256)} -y merged_output.mp4`;
+                } else {
+                    code += `ffmpeg -f concat -safe 0 -i mylist.txt -c copy -y merged_output.mp4`;
+                }
+            } else {
+                code += '# Graded high performance transcoding dynamic statement\n';
+                const inputArgs = filesQueue.map(f => `-i "${f.name}"`).join(' ');
+                code += `ffmpeg ${inputArgs} \\\n`;
+                if (audioName !== 'None') {
+                    code += `  -stream_loop -1 -i "${audioName}" \\\n`;
+                }
+
+                // mock basic filters complex
+                let filt = '  -filter_complex "';
+                filesQueue.forEach((f, idx) => {
+                    filt += `[${idx}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=fps=24,format=yuv420p[v${idx}]; `;
+                });
+                filesQueue.forEach((f, idx) => {
+                    filt += `[v${idx}][${idx}:a]`;
+                });
+                filt += `concat=n=${filesQueue.length}:v=1:a=1[v_concat][a_stitch]; `;
+                if (lutActive) {
+                    filt += `[v_concat]lut3d='${lutFileName}':interp=tetrahedral[v_lut_graded]; `;
+                    filt += `[v_concat][v_lut_graded]blend=all_expr='A*(1-${lutIntensity})+B*${lutIntensity}'[v_out]`;
+                } else {
+                    filt += `[v_concat]split[v_out]`;
+                }
+                filt += '" \\\n';
+
+                code += filt;
+                code += '  -map "[v_out]" \\\n';
+                if (audioName !== 'None') {
+                    code += `  -map ${filesQueue.length}:a \\\n`;
+                } else {
+                    code += '  -map "[a_stitch]" \\\n';
+                }
+
+                code += `  -c:v ${configCodec === 'prores' ? 'prores_ks' : configCodec} -preset ${configPreset} -crf ${configCrf} -shortest -y output_assembler_vitch.mp4`;
+            }
+
+            cmdBlock.innerText = code;
+        }
+
+        // Compile script action
+        function compilePipelineNow() {
+            if (filesQueue.length === 0) {
+                logText('error', 'Staged compilation queue is empty! Append video descriptors.');
+                return;
+            }
+            logText('info', 'Invoking FFmpeg rendering simulator inside sandbox context...');
+            
+            setTimeout(() => {
+                logText('success', 'COMPILATION READY! Native executable generated. Run Downloads/assemble.sh on macOS natively.');
+            }, 1000);
+        }
+
+        // Download payload shell file
+        function downloadAssembleScript() {
+            if (filesQueue.length === 0) {
+                logText('error', 'Staging empty script blocked. Preload elements.');
+                return;
+            }
+
+            const header = `#!/bin/bash\n# Vitch macOS POSIX Compiler Package\n# Generated dynamically via Vitch TUI UI\n\n`;
+            const content = header + `echo "Vitch CLI starting process..."\n` + document.getElementById('cli-command-block').innerText + `\necho "Finished stitching process."`;
+            
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'assemble.sh';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            logText('success', 'Generated local terminal bundle wrapper payload: assemble.sh.');
+        }
+
+        // Copy item to clipboard
+        function copyCommandStatement() {
+            const code = document.getElementById('cli-command-block').innerText;
+            navigator.clipboard.writeText(code);
+            logText('success', 'Staged FFmpeg command copied to native clipboard clipboard buffer.');
+        }
+
+        // Switch listeners keys 1-3 for quick navigation
+        window.addEventListener('keydown', (e) => {
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'INPUT' || tag === 'SELECT') return;
+
+            const key = e.key.toUpperCase();
+            if (key === '1') switchTab(1);
+            if (key === '2') switchTab(2);
+            if (key === '3') switchTab(3);
+            if (key === 'A') {
+                const sampleName = `hotkey_clip_${Math.floor(Math.random()*900)+100}.mp4`;
+                filesQueue.push({
+                    id: Date.now().toString(),
+                    name: sampleName,
+                    duration: 15,
+                    size: 80,
+                    resolution: '1920x1080',
+                    fps: 24,
+                    codec: 'h264'
+                });
+                updateUILayout();
+                logText('info', `Hotkey [A]: Added clip descriptor: ${sampleName}`);
+            }
+            if (key === 'C') {
+                filesQueue = [];
+                updateUILayout();
+                logText('warn', 'Hotkey [C]: Reset stitch queue.');
+            }
+            if (key === 'R') {
+                compilePipelineNow();
+            }
+        });
+    </script>
+</body>
+</html>
