@@ -151,7 +151,7 @@ export function buildMacOsScript(
   return `#!/bin/bash
 
 # ==============================================================================
-# TUI Video Assembler Pro - Generated macOS Compilation Script
+# Vitch - Generated macOS Compilation Script
 # Target System: macOS (Darwin)
 # Executable Type: POSIX Bash Script
 # Codec Config: ${config.outputCodec.toUpperCase()} (Mode: ${isLossless ? 'Lossless Stream Copy' : 'Active Transcode / Grade'})
@@ -188,7 +188,7 @@ NC='\\033[0m' # No Color
 
 clear
 echo -e "\${CYAN}\${BOLD}┌────────────────────────────────────────────────────────┐\${NC}"
-echo -e "\${CYAN}\${BOLD}│              TUI VIDEO PIPELINE COMPILER               │\${NC}"
+echo -e "\${CYAN}\${BOLD}│                     VITCH PIPELINE                     │\${NC}"
 echo -e "\${CYAN}\${BOLD}│                     macOS Native                       │\${NC}"
 echo -e "\${CYAN}\${BOLD}└────────────────────────────────────────────────────────┘\${NC}"
 echo ""
@@ -250,8 +250,8 @@ fi
 # STEP 3: Concat Manifest Compilation
 echo -e " "
 echo -e "\${BLUE}[STEP 3/5]\${NC} Generating concat list manifest file..."
-log_info "Step 3: Building list file: tui_concat_manifest.txt"
-MANIFEST_FILE="tui_concat_manifest.txt"
+log_info "Step 3: Building list file: vitch_concat_manifest.txt"
+MANIFEST_FILE="vitch_concat_manifest.txt"
 rm -f "\$MANIFEST_FILE"
 
 ${videoNames.map(name => `echo "file '${name}'" >> "\$MANIFEST_FILE"`).join('\n')}

@@ -88,7 +88,7 @@ export default function App() {
       id: 'log-1',
       timestamp: '11:45:00',
       type: 'info',
-      text: 'Initializing TUI video compiler engine...',
+      text: 'Initializing Vitch video compiler engine...',
     },
     {
       id: 'log-2',
@@ -243,7 +243,7 @@ export default function App() {
 
     setIsCompiling(true);
     setCompileProgress(0);
-    logMessage('cmd', 'Initializing FFmpeg stitching assembler pipeline...');
+    logMessage('cmd', 'Initializing Vitch stitching assembler pipeline...');
 
     const isLossless = config.outputCodec === 'copy' && !lut.active;
 
