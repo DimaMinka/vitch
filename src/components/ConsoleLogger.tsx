@@ -32,7 +32,7 @@ export default function ConsoleLogger({
     const filledBlocks = Math.floor((compileProgress / 100) * totalBlocks);
     const emptyBlocks = totalBlocks - filledBlocks;
     
-    const bar = '='.repeat(filledBlocks) + '>' + ' '.repeat(Math.max(0, emptyBlocks - 1));
+    const bar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
     return `[${bar}] ${compileProgress}%`;
   };
 
@@ -143,7 +143,7 @@ export default function ConsoleLogger({
               {renderProgressBar()}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 pt-0.5 border-t border-emerald-500/10 font-mono">
+            <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 pt-1.5 border-t border-emerald-500/10 font-mono">
               <div>Bitrate: <span className="text-gray-300 font-bold">14.8 Mb/s</span></div>
               <div>Frame Render Speed: <span className="text-gray-300 font-bold">3.8x (96 fps)</span></div>
               <div>Buffer Alloc: <span className="text-[#38bdf8] font-bold">Metal v3</span></div>
