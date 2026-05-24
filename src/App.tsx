@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { VideoFile, AudioTrack, LutConfig, FfmpegConfig, LogLine } from './types';
 import { buildMacOsScript } from './utils';
 
@@ -83,16 +83,16 @@ export default function App({ embedded = false }: AppProps) {
   const [activeTab, setActiveTab] = useState<number>(1);
 
   const [audio, setAudio] = useState<AudioTrack>({
-    name: 'background_cinematic_pulse.flac',
-    duration: 180,
+    name: 'None',
+    duration: 0,
     loop: true,
     volume: 0.6,
-    syncToVideo: true,
+    syncToVideo: false,
   });
 
   const [lut, setLut] = useState<LutConfig>({
-    active: true,
-    fileName: 'hollywood_teal_orange_3d.cube',
+    active: false,
+    fileName: '',
     intensity: 0.8,
     colorSpace: 'bt709',
   });
@@ -144,6 +144,32 @@ export default function App({ embedded = false }: AppProps) {
       },
     ]);
   };
+
+  // Monitor LUT configuration state changes and log them in the terminal simulator
+  const prevLut = useRef(lut);
+  useEffect(() => {
+    if (lut.active !== prevLut.current.active || lut.fileName !== prevLut.current.fileName) {
+      if (lut.active && lut.fileName) {
+        logMessage('success', `Staged custom 3D LUT: ${lut.fileName} [interpolator: tetrahedral]`);
+      } else if (!lut.active && prevLut.current.active) {
+        logMessage('warn', `Bypassed LUT color grading. Reset to flat stream copy.`);
+      }
+      prevLut.current = lut;
+    }
+  }, [lut]);
+
+  // Monitor Audio configuration state changes and log them in the terminal simulator
+  const prevAudio = useRef(audio);
+  useEffect(() => {
+    if (audio.name !== prevAudio.current.name) {
+      if (audio.name !== 'None') {
+        logMessage('success', `Staged backing audio backtrack: ${audio.name} (volume: ${Math.round(audio.volume * 100)}%)`);
+      } else if (audio.name === 'None' && prevAudio.current.name !== 'None') {
+        logMessage('warn', `Bypassed audio backtrack loop. Falling back to native video tracks.`);
+      }
+      prevAudio.current = audio;
+    }
+  }, [audio]);
 
   // ──────────────────────────────────────────────
   // KEYBOARD SHORTCUTS CONTROLLER
@@ -387,6 +413,8 @@ export default function App({ embedded = false }: AppProps) {
               config={config}
               setConfig={setConfig}
               onRunCompile={handleRunCompile}
+              isCompiling={isCompiling}
+              compileProgress={compileProgress}
             />
           </div>
         </div>

@@ -1,6 +1,9 @@
 import { AudioTrack, LutConfig, FfmpegConfig } from '../types';
-import { Settings, Film, Palette, Music, Cpu, Play, Music4, Eye } from 'lucide-react';
+import { Settings, Film, Palette, Music, Cpu, Play, Music4, RefreshCw } from 'lucide-react';
 import React, { useState } from 'react';
+
+const LUT_DIR = ((import.meta as any).env?.VITE_LUT_DIR || '').trim();
+const AUDIO_DIR = ((import.meta as any).env?.VITE_AUDIO_DIR || '').trim();
 
 interface SettingsPanelProps {
   activeTab: number;
@@ -12,16 +15,9 @@ interface SettingsPanelProps {
   config: FfmpegConfig;
   setConfig: (config: FfmpegConfig) => void;
   onRunCompile: () => void;
+  isCompiling: boolean;
+  compileProgress: number;
 }
-
-const LUT_PRESETS = [
-  { id: 'none', label: 'Bypass (No Grade)', file: '', color: 'bg-gray-700', previewColor: 'from-gray-500 via-gray-400 to-gray-500' },
-  { id: 'teal_orange', label: 'Teal & Orange Hollywood v2', file: 'hollywood_teal_orange_3d.cube', color: 'bg-cyan-500', previewColor: 'from-cyan-900 via-[#d97706] to-cyan-800' },
-  { id: 'slog_rec709', label: 'Sony S-Log3 -> Rec.709 Standard', file: 'sony_slog3_to_rec709.cube', color: 'bg-emerald-500', previewColor: 'from-emerald-950 via-gray-300 to-emerald-900' },
-  { id: 'vintage_gold', label: 'Kodak Portra 400 Warm Film', file: 'kodak_portra_400_warm.cube', color: 'bg-amber-500', previewColor: 'from-yellow-950 via-amber-200 to-orange-900' },
-  { id: 'cyberpunk', label: 'Cyberpunk Neo-Noir Magenta', file: 'cyberpunk_neo_noir_synth.cube', color: 'bg-fuchsia-500', previewColor: 'from-fuchsia-950 via-cyan-400 to-indigo-950' },
-  { id: 'monochrome_chrome', label: 'High Contrast Silver Pan-Chrome', file: 'silver_chrome_monochromatic.cube', color: 'bg-zinc-500', previewColor: 'from-black via-zinc-400 to-white' },
-];
 
 export default function SettingsPanel({
   activeTab,
@@ -33,29 +29,25 @@ export default function SettingsPanel({
   config,
   setConfig,
   onRunCompile,
+  isCompiling,
+  compileProgress,
 }: SettingsPanelProps) {
-  const [customLutInput, setCustomLutInput] = useState('');
-  const [simulatedAudioUpload, setSimulatedAudioUpload] = useState<string>('');
-
-  const handleLutPresetChange = (presetId: string) => {
-    if (presetId === 'none') {
-      setLut({ ...lut, active: false, fileName: '' });
-    } else if (presetId === 'custom') {
-      // Keep existing custom filename
-      setLut({ ...lut, active: true });
-    } else {
-      const preset = LUT_PRESETS.find(p => p.id === presetId);
-      if (preset) {
-        setLut({ ...lut, active: true, fileName: preset.file });
-      }
-    }
+  const getInitialPath = (dir: string) => {
+    if (!dir) return '';
+    // If it's a file (ends in an extension like .cube, .flac, .mp3, etc.)
+    if (/\.[a-zA-Z0-9]+$/.test(dir)) return dir;
+    return dir.endsWith('/') ? dir : `${dir}/`;
   };
+
+  const [customLutInput, setCustomLutInput] = useState(getInitialPath(LUT_DIR));
+  const [simulatedAudioUpload, setSimulatedAudioUpload] = useState<string>(getInitialPath(AUDIO_DIR));
 
   const handleCustomLutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customLutInput.trim()) return;
+    const value = customLutInput.trim();
+    if (!value || value.endsWith('/')) return;
 
-    let filename = customLutInput.trim();
+    let filename = value;
     if (!filename.includes('.')) {
       filename += '.cube';
     }
@@ -65,14 +57,18 @@ export default function SettingsPanel({
       active: true,
       fileName: filename,
     });
-    setCustomLutInput('');
+    if (config.outputCodec === 'copy') {
+      setConfig({ ...config, outputCodec: 'libx264' });
+    }
+    setCustomLutInput(getInitialPath(LUT_DIR));
   };
 
   const handleAudioUploadSimulate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!simulatedAudioUpload.trim()) return;
+    const value = simulatedAudioUpload.trim();
+    if (!value || value.endsWith('/')) return;
 
-    let filename = simulatedAudioUpload;
+    let filename = value;
     if (!filename.endsWith('.mp3') && !filename.endsWith('.flac')) {
       filename += '.flac';
     }
@@ -83,7 +79,7 @@ export default function SettingsPanel({
       duration: 180, // Default 3 mins track
       syncToVideo: true,
     });
-    setSimulatedAudioUpload('');
+    setSimulatedAudioUpload(getInitialPath(AUDIO_DIR));
   };
 
   const removeAudioTrack = () => {
@@ -94,10 +90,6 @@ export default function SettingsPanel({
       syncToVideo: false,
     });
   };
-
-  const activeLutId = lut.active
-    ? (LUT_PRESETS.find(p => p.file === lut.fileName)?.id || 'custom')
-    : 'none';
 
   return (
     <div className="border border-[#2d3748] bg-[#0c101b] rounded-lg overflow-hidden flex flex-col h-full font-mono select-none" id="settings-panel">
@@ -151,10 +143,24 @@ export default function SettingsPanel({
         </div>
         <button
           onClick={onRunCompile}
-          className="mx-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white font-bold rounded text-[11px] uppercase transition cursor-pointer flex items-center space-x-1 shadow-lg shadow-emerald-500/10"
+          disabled={isCompiling}
+          className={`mx-2 px-3 py-1 font-bold rounded text-[11px] uppercase transition cursor-pointer flex items-center space-x-1 shadow-lg ${
+            isCompiling
+              ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 shadow-emerald-500/5'
+              : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
+          }`}
         >
-          <Play size={10} fill="currentColor" />
-          <span>Compile Script</span>
+          {isCompiling ? (
+            <>
+              <RefreshCw size={10} className="animate-spin text-emerald-400" />
+              <span>Compiling {compileProgress}%</span>
+            </>
+          ) : (
+            <>
+              <Play size={10} fill="currentColor" />
+              <span>Compile Script</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -175,7 +181,12 @@ export default function SettingsPanel({
 
               <div className="grid grid-cols-2 gap-2">
                 <label
-                  onClick={() => setConfig({ ...config, outputCodec: 'copy' })}
+                  onClick={() => {
+                    setConfig({ ...config, outputCodec: 'copy' });
+                    if (lut.active) {
+                      setLut({ ...lut, active: false, fileName: '' });
+                    }
+                  }}
                   className={`border p-2.5 rounded cursor-pointer transition flex flex-col justify-between ${
                     config.outputCodec === 'copy'
                       ? 'border-emerald-500 bg-emerald-500/5 text-emerald-300'
@@ -336,48 +347,33 @@ export default function SettingsPanel({
                 Upload or select an external 3D Look-Up Table (`.cube` format). FFmpeg scales color spaces with sub-pixel high fidelity on the fly. <b className="text-[#e2e8f0]">Graded Transcode Mode</b> will trigger automatically.
               </p>
 
-              {/* Grid choosing template */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                {LUT_PRESETS.map((p) => {
-                  const isSelected = activeLutId === p.id;
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => handleLutPresetChange(p.id)}
-                      className={`border p-2.5 rounded cursor-pointer transition flex items-center space-x-2 bg-[#0c1221] hover:bg-[#111a2f] ${
-                        isSelected ? 'border-amber-500 bg-amber-500/5' : 'border-[#1e293b]'
-                      }`}
-                    >
-                      <span className={`w-3 h-3 rounded ${p.color}`}></span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-bold text-[11px] truncate ${isSelected ? 'text-amber-400' : 'text-gray-300'}`}>
-                          {p.label}
-                        </p>
-                        <p className="text-[9px] text-gray-500 truncate mt-0.5">
-                          {p.file ? `f: ${p.file}` : 'Direct native bypass'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {activeLutId === 'custom' && (
-                  <div
-                    onClick={() => handleLutPresetChange('custom')}
-                    className="border p-2.5 rounded cursor-pointer transition flex items-center space-x-2 bg-[#1b150c] hover:bg-[#2c1d0c] border-amber-500 col-span-2 shadow-inner"
-                  >
-                    <span className="w-3 h-3 rounded bg-amber-500 animate-pulse"></span>
-                    <div className="flex-1 min-w-0">
+              {/* LUT Active Status Card */}
+              {lut.active && lut.fileName ? (
+                <div className="border border-amber-500/30 p-3 rounded mb-3 bg-[#1b150c] flex items-center justify-between animate-fade-in">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <span className="w-3 h-3 rounded bg-amber-500 animate-pulse flex-shrink-0"></span>
+                    <div className="min-w-0">
                       <p className="font-extrabold text-[11px] text-amber-300 truncate font-mono">
-                        ★ Custom Staged 3D LUT Cube
+                        ★ Custom Staged 3D LUT Cube Active
                       </p>
-                      <p className="text-[9px] text-gray-400 truncate mt-0.5 font-mono">
-                        f: {lut.fileName}
+                      <p className="text-[10px] text-gray-400 truncate mt-0.5 font-mono">
+                        {lut.fileName}
                       </p>
                     </div>
                   </div>
-                )}
-              </div>
+                  <button
+                    onClick={() => setLut({ ...lut, active: false, fileName: '' })}
+                    className="px-2.5 py-1 bg-red-950/40 border border-red-500/30 text-red-300 rounded hover:bg-red-950/80 transition cursor-pointer text-[10px] font-bold uppercase flex-shrink-0"
+                  >
+                    Bypass LUT
+                  </button>
+                </div>
+              ) : (
+                <div className="border border-dashed border-[#2d3748] p-4 rounded text-center mb-3 bg-[#070b12] animate-fade-in">
+                  <p className="text-gray-500 text-[11px] mb-1 font-semibold">No Custom 3D LUT Staged</p>
+                  <p className="text-[9px] text-gray-600">Bypass mode active. Videos will be stitched losslessly without grading.</p>
+                </div>
+              )}
 
               {/* Slider for intensity */}
               {lut.active && (
@@ -439,7 +435,14 @@ export default function SettingsPanel({
 
               {/* Form to feed customized LUT filename/path */}
               <form onSubmit={handleCustomLutSubmit} className="mt-3 bg-[#0c1221]/40 border border-[#2d3748]/20 p-2.5 rounded">
-                <label className="text-[10px] text-gray-500 block mb-1 uppercase font-bold">Stage Custom 3D LUT (.cube) Path</label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[10px] text-gray-500 block uppercase font-bold">Stage Custom 3D LUT (.cube) Path</label>
+                  {LUT_DIR && (
+                    <span className="text-amber-400 font-bold select-none border border-amber-500/20 px-1.5 py-0.5 rounded bg-amber-500/5 uppercase text-[8px] font-mono">
+                      env: {LUT_DIR}
+                    </span>
+                  )}
+                </div>
                 <div className="flex space-x-2">
                   <input
                     type="text"
@@ -459,38 +462,6 @@ export default function SettingsPanel({
                   Typing a custom LUT file path will load it into the FFmpeg filter graph (e.g. <code className="text-amber-400">lut3d='my_file.cube'</code>).
                 </p>
               </form>
-            </div>
-
-            {/* Simulated Live Grade Preview box */}
-            <div className="border border-[#1e293b] bg-[#070b12] p-3 rounded">
-              <h4 className="text-[10px] font-bold uppercase text-gray-400 mb-2 flex items-center gap-1.5">
-                <Eye size={11} className="text-cyan-400" />
-                <span>Simulated Render Pipeline View</span>
-              </h4>
-              <div className="relative aspect-video rounded bg-black flex items-center justify-center overflow-hidden border border-[#2d3748]/50">
-                <div className="absolute inset-0 bg-gradient-to-tr from-[#1a1f2c] to-[#0d1527]"></div>
-                
-                {/* Visualizer showing grading contrast split based on selected LUT */}
-                {lut.active ? (
-                  <div className="absolute inset-0 flex">
-                    <div className="w-1/2 h-full bg-gradient-to-tr from-[#2d3d52] to-[#1e2836] relative flex items-end p-2 border-r border-[#10b981]/50 shadow-[rgba(16,185,129,0.1)_10px_0_15px]">
-                      <span className="text-[9px] bg-black/60 px-1 py-0.5 rounded text-gray-400">ORIGINAL (LOG / FLAT)</span>
-                    </div>
-                    {/* Filter Preview */}
-                    <div className={`w-1/2 h-full bg-gradient-to-tr ${LUT_PRESETS.find(p => p.id === activeLutId)?.previewColor || 'from-[#451a03] via-[#1e1b4b] to-[#031d10]'} relative flex items-end justify-end p-2`}>
-                      <span className="text-[9px] bg-amber-500/20 px-1.5 py-0.5 border border-amber-500/40 text-amber-300 rounded uppercase font-bold tracking-wide">
-                        LUT STAGED ({Math.round(lut.intensity * 100)}%)
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center font-mono space-y-1.5 z-10 p-4">
-                    <span className="text-[32px]">⚙️</span>
-                    <p className="text-[10px] text-gray-500">Grading System Bypassed</p>
-                    <p className="text-[9px] text-gray-600">Video output will be duplicated stream-for-stream losslessly.</p>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         )}
@@ -514,7 +485,7 @@ export default function SettingsPanel({
                       <span className="text-[16px]">🎵</span>
                       <div>
                         <p className="font-extrabold text-gray-200">{audio.name}</p>
-                        <p className="text-[9px] text-[#805ad5] uppercase font-bold">FLAC Audio Stream Active</p>
+                        <p className="text-[9px] text-[#805ad5] uppercase font-bold">Custom Audio Stream Active</p>
                       </div>
                     </div>
                     <button
@@ -559,30 +530,22 @@ export default function SettingsPanel({
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#05080e]/50 p-4 border border-[#1e293b] rounded text-center mb-3">
-                  <p className="text-gray-500 text-[11px] mb-2 font-semibold">No Audio Backtrack Track Stage Mounted</p>
-                  
-                  {/* Preset Quick Loader buttons */}
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      onClick={() => setAudio({ name: 'background_cinematic_pulse.flac', duration: 180, loop: true, volume: 0.65, syncToVideo: true })}
-                      className="px-2 py-1 text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded hover:bg-indigo-500/25 transition cursor-pointer"
-                    >
-                      + Load cinematic_pulse.flac
-                    </button>
-                    <button
-                      onClick={() => setAudio({ name: 'lofi_dream_beats.mp3', duration: 240, loop: true, volume: 0.45, syncToVideo: true })}
-                      className="px-2 py-1 text-[10px] bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded hover:bg-indigo-500/25 transition cursor-pointer"
-                    >
-                      + Load lofi_beats.mp3
-                    </button>
-                  </div>
+                <div className="border border-dashed border-[#2d3748] p-4 rounded text-center mb-3 bg-[#070b12] animate-fade-in">
+                  <p className="text-gray-500 text-[11px] mb-1 font-semibold">No Audio Backtrack Staged</p>
+                  <p className="text-[9px] text-gray-600">Bypass mode active. Original video audio streams will be maintained.</p>
                 </div>
               )}
 
               {/* Form to feed customized audio filename */}
               <form onSubmit={handleAudioUploadSimulate} className="mt-3">
-                <label className="text-[10px] text-gray-500 block mb-1 uppercase font-semibold">Stage Custom macOS Backtrack Path</label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[10px] text-gray-500 block uppercase font-semibold">Stage Custom macOS Backtrack Path</label>
+                  {AUDIO_DIR && (
+                    <span className="text-indigo-400 font-bold select-none border border-indigo-500/20 px-1.5 py-0.5 rounded bg-indigo-500/5 uppercase text-[8px] font-mono">
+                      env: {AUDIO_DIR}
+                    </span>
+                  )}
+                </div>
                 <div className="flex space-x-2">
                   <input
                     type="text"
