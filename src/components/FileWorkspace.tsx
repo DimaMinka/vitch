@@ -33,12 +33,6 @@ export default function FileWorkspace({
   setSelectedVideoId,
   onScanSuccess,
 }: FileWorkspaceProps) {
-  const [customName, setCustomName] = useState('');
-  const [customDuration, setCustomDuration] = useState('15');
-  const [customSize, setCustomSize] = useState('50');
-  const [customRes, setCustomRes] = useState('1920x1080');
-  const [customFps, setCustomFps] = useState('24');
-  const [customCodec, setCustomCodec] = useState('h264');
 
   const [scanPath, setScanPath] = useState('~/Movies');
   const [isScanning, setIsScanning] = useState(false);
@@ -87,28 +81,6 @@ export default function FileWorkspace({
       id: crypto.randomUUID(),
       ...preset,
     });
-  };
-
-  const handleAddCustom = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customName.trim()) return;
-
-    // Ensure extension
-    let filename = customName;
-    if (!filename.includes('.')) {
-      filename += customCodec === 'prores' ? '.mov' : '.mp4';
-    }
-
-    onAddVideo({
-      id: crypto.randomUUID(),
-      name: filename,
-      duration: parseFloat(customDuration) || 10,
-      size: parseFloat(customSize) || 45,
-      resolution: customRes,
-      fps: parseFloat(customFps) || 24,
-      codec: customCodec,
-    });
-    setCustomName('');
   };
 
   const loadAllPresets = () => {
@@ -288,102 +260,6 @@ export default function FileWorkspace({
             </table>
           </div>
         )}
-      </div>
-
-      {/* Manual Clip Inserter Widget */}
-      <div className="border-t border-[#2d3748] bg-[#090d16] p-3 text-xs">
-        <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 tracking-wide flex items-center justify-between">
-          <span>Manual Input Vector (Create custom clips)</span>
-          <span className="text-gray-600">Simulate file descriptor specs</span>
-        </div>
-        <form onSubmit={handleAddCustom} className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Clip File Name</label>
-              <input
-                type="text"
-                placeholder="e.g. drone_city_sunset"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                className="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1 text-gray-200 outline-none focus:border-emerald-500 transition text-[11px]"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Scale Preset</label>
-              <select
-                value={customRes}
-                onChange={(e) => setCustomRes(e.target.value)}
-                className="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1 text-gray-200 outline-none focus:border-emerald-500 transition text-[11px]"
-              >
-                <option value="1920x1080">1920x1080 (HD 1085)</option>
-                <option value="3840x2160">3840x2160 (4K UHD)</option>
-                <option value="1280x720">1280x720 (Standard HD)</option>
-                <option value="1080x1350">1080x1350 (Dynamic Vertical)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-2">
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Length (s)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                value={customDuration}
-                onChange={(e) => setCustomDuration(e.target.value)}
-                className="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1 text-gray-200 text-center outline-none focus:border-emerald-500 transition text-[11px]"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Size (MB)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                value={customSize}
-                onChange={(e) => setCustomSize(e.target.value)}
-                className="w-full bg-[#05080e] border border-[#2d3748] rounded px-2 py-1 text-gray-200 text-center outline-none focus:border-emerald-500 transition text-[11px]"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">FPS</label>
-              <select
-                value={customFps}
-                onChange={(e) => setCustomFps(e.target.value)}
-                className="w-full bg-[#05080e] border border-[#2d3748] rounded px-1 py-1 text-gray-200 outline-none focus:border-emerald-500 transition text-[11px]"
-              >
-                <option value="23.976">23.98</option>
-                <option value="24">24.0</option>
-                <option value="29.97">29.97</option>
-                <option value="30">30.0</option>
-                <option value="59.94">59.94</option>
-                <option value="60">60.0</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Format</label>
-              <select
-                value={customCodec}
-                onChange={(e) => setCustomCodec(e.target.value)}
-                className="w-full bg-[#05080e] border border-[#2d3748] rounded px-1 py-1 text-gray-200 outline-none focus:border-emerald-500 transition text-[11px]"
-              >
-                <option value="h264">H.264 (MP4)</option>
-                <option value="h265">H.265 (HEVC)</option>
-                <option value="prores">ProRes C8</option>
-              </select>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-1.5 mt-1 bg-emerald-600 border border-emerald-500 text-white rounded hover:bg-emerald-500 transition font-bold tracking-wider text-[11px] cursor-pointer inline-flex items-center justify-center space-x-1.5"
-          >
-            <Plus size={12} />
-            <span>Stitch Clip To Queue</span>
-          </button>
-        </form>
-      </div>
-    </div>
+      </div>    </div>
   );
 }
