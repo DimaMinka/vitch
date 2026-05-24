@@ -221,6 +221,18 @@ export default function App() {
     setLogs([]);
   };
 
+  const handleScanSuccess = (resolvedPath: string, scannedVideos: VideoFile[]) => {
+    setVideos(scannedVideos);
+    if (scannedVideos.length > 0) {
+      logMessage('success', `Directory scan complete: ${resolvedPath}`);
+      logMessage('info', `Found and loaded ${scannedVideos.length} video files into queue!`);
+      setSelectedVideoId(scannedVideos[0].id);
+    } else {
+      logMessage('warn', `Directory scan complete, but found no video files in: ${resolvedPath}`);
+    }
+  };
+
+
   // Triggers compilation simulator
   const handleRunCompile = () => {
     if (videos.length === 0) {
@@ -329,6 +341,7 @@ export default function App() {
               onClearQueue={handleClearQueue}
               selectedVideoId={selectedVideoId}
               setSelectedVideoId={setSelectedVideoId}
+              onScanSuccess={handleScanSuccess}
             />
           </div>
 

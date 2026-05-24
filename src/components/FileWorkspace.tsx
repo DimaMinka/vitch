@@ -11,6 +11,7 @@ interface FileWorkspaceProps {
   onClearQueue: () => void;
   selectedVideoId: string | null;
   setSelectedVideoId: (id: string | null) => void;
+  onScanSuccess?: (path: string, newVideos: VideoFile[]) => void;
 }
 
 const SAMPLE_PRESETS: Omit<VideoFile, 'id'>[] = [
@@ -30,6 +31,7 @@ export default function FileWorkspace({
   onClearQueue,
   selectedVideoId,
   setSelectedVideoId,
+  onScanSuccess,
 }: FileWorkspaceProps) {
   const [customName, setCustomName] = useState('');
   const [customDuration, setCustomDuration] = useState('15');
@@ -37,6 +39,40 @@ export default function FileWorkspace({
   const [customRes, setCustomRes] = useState('1920x1080');
   const [customFps, setCustomFps] = useState('24');
   const [customCodec, setCustomCodec] = useState('h264');
+
+  const [scanPath, setScanPath] = useState('~/Movies');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const handleScanDirectory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!scanPath.trim()) return;
+
+    setIsScanning(true);
+    setScanError(null);
+
+    try {
+      const response = await fetch(`/api/scan?path=${encodeURIComponent(scanPath.trim())}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to scan directory');
+      }
+
+      const scannedVideos: VideoFile[] = data.files.map((file: any) => ({
+        id: crypto.randomUUID(),
+        ...file
+      }));
+
+      if (onScanSuccess) {
+        onScanSuccess(data.path, scannedVideos);
+      }
+    } catch (err: any) {
+      setScanError(err.message);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   // Trigger file dialog simulator
   const handleAddPreset = (preset: Omit<VideoFile, 'id'>) => {
@@ -105,12 +141,33 @@ export default function FileWorkspace({
         </div>
       </div>
 
-      {/* Directory Path Details */}
-      <div className="bg-[#080b12] px-3 py-1.5 border-b border-[#2d3748]/60 text-[10px] text-gray-400 flex justify-between">
-        <span className="text-[#a0aec0]">
-          Scanning: <span className="text-[#38bdf8]">~/Movies/RawProjects/Project_Alpha_Stitch/</span>
-        </span>
-        <span className="text-gray-500">{videos.length} videos queued</span>
+      {/* Directory Path Input */}
+      <div className="bg-[#080b12] px-3 py-2 border-b border-[#2d3748]/60 flex flex-col space-y-1.5">
+        <form onSubmit={handleScanDirectory} className="flex items-center space-x-2 w-full">
+          <span className="text-[10px] text-gray-500 select-none uppercase font-bold tracking-wider">Path:</span>
+          <input
+            type="text"
+            value={scanPath}
+            onChange={(e) => setScanPath(e.target.value)}
+            placeholder="e.g. ~/Movies or /Users/username/Downloads"
+            className="flex-1 bg-[#05080e] border border-[#2d3748]/60 rounded px-2 py-0.5 text-gray-200 outline-none focus:border-emerald-500 transition text-[11px] font-mono"
+          />
+          <button
+            type="submit"
+            disabled={isScanning}
+            className="px-2 py-0.5 text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/25 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-bold"
+          >
+            {isScanning ? 'Scanning...' : 'Scan Directory'}
+          </button>
+        </form>
+        <div className="flex justify-between items-center text-[10px]">
+          {scanError ? (
+            <span className="text-red-400 font-bold">⚠️ Error: {scanError}</span>
+          ) : (
+            <span className="text-gray-500">Press Enter or click Scan to read files from disk</span>
+          )}
+          <span className="text-gray-500 font-bold uppercase">{videos.length} videos queued</span>
+        </div>
       </div>
 
       {/* Video Files Table */}

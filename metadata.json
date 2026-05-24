@@ -1,6 +1,1 @@
-{
-  "name": "Vitch",
-  "description": "A high-performance macOS Terminal-styled TUI application for batch video stitching, FFmpeg LUT integration, background audio looping, and script rendering.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
+{"name":"TUI Video Assembler Pro","description":"A high-performance macOS Terminal-styled TUI application for batch video stitching, FFmpeg LUT integration, background audio looping, and script rendering.","requestFramePermissions":[],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}
