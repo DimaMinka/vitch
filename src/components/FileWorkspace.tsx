@@ -44,6 +44,13 @@ export default function FileWorkspace({
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
+  const isLocalHost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' || 
+     window.location.hostname.startsWith('172.') || 
+     window.location.hostname.startsWith('192.168.') ||
+     window.location.hostname.startsWith('10.'));
+
   const handleScanDirectory = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!scanPath.trim()) return;
@@ -163,6 +170,8 @@ export default function FileWorkspace({
         <div className="flex justify-between items-center text-[10px]">
           {scanError ? (
             <span className="text-red-400 font-bold">⚠️ Error: {scanError}</span>
+          ) : !isLocalHost ? (
+            <span className="text-amber-500 font-semibold select-none">⚠️ Directory scan requires running locally (npm run dev)</span>
           ) : (
             <span className="text-gray-500">Press Enter or click Scan to read files from disk</span>
           )}
