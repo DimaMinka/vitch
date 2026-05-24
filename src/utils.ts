@@ -1,5 +1,19 @@
 import { VideoFile, AudioTrack, LutConfig, FfmpegConfig } from './types';
 
+const VIDEO_DIR = ((import.meta as any).env?.VITE_VIDEO_DIR || '').trim();
+const LUT_DIR = ((import.meta as any).env?.VITE_LUT_DIR || '').trim();
+const AUDIO_DIR = ((import.meta as any).env?.VITE_AUDIO_DIR || '').trim();
+
+function resolvePath(dir: string, file: string): string {
+  if (!file) return '';
+  if (!dir) return file;
+  if (file.startsWith('/') || file.startsWith('~') || file.startsWith('./')) {
+    return file;
+  }
+  const separator = dir.endsWith('/') ? '' : '/';
+  return `${dir}${separator}${file}`;
+}
+
 export function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -39,12 +53,13 @@ export function buildFfmpegCommand(
   if (isCopy) {
     // True Stream Concat - Zero Loss
     let cmd = '# Step 1: Create file list\n';
-    cmd += 'printf "file \'%s\'\\n" ' + videos.map(v => v.name).join(' ') + ' > mylist.txt\n\n';
+    cmd += 'printf "file \'%s\'\\n" ' + videos.map(v => resolvePath(VIDEO_DIR, v.name)).join(' ') + ' > mylist.txt\n\n';
     cmd += '# Step 2: Concat files without re-encoding (Instant + Stream Copy Lossless)\n';
     
     if (audio.syncToVideo && audio.name !== 'None') {
-      cmd += `ffmpeg -f concat -safe 0 -i mylist.txt -stream_loop -1 -i "${audio.name}" \\\n`;
-      cmd += `  -c:v copy -c:a aac -filter:a "volume=${audio.volume}" -map 0:v -map 1:a -shortest -y merged_output.mp4`;
+      const totalDuration = videos.reduce((sum, v) => sum + v.duration, 0);
+      cmd += `ffmpeg -f concat -safe 0 -i mylist.txt -stream_loop -1 -i "${resolvePath(AUDIO_DIR, audio.name)}" \\\n`;
+      cmd += `  -c:v copy -c:a aac -filter:a "volume=${audio.volume}" -map 0:v -map 1:a -t ${totalDuration.toFixed(2)} -y merged_output.mp4`;
     } else {
       cmd += `ffmpeg -f concat -safe 0 -i mylist.txt -c copy -y merged_output.mp4`;
     }
@@ -53,12 +68,12 @@ export function buildFfmpegCommand(
 
   // Transcoded / Graded Concat (Necessary if applying LUT or scaling)
   let cmd = '# Create file list for inputs\n';
-  const inputArgs = videos.map(v => `-i "${v.name}"`).join(' ');
+  const inputArgs = videos.map(v => `-i "${resolvePath(VIDEO_DIR, v.name)}"`).join(' ');
   const filterComplex = buildFilterComplex(videos, lut, config, audio);
 
   cmd += `ffmpeg ${inputArgs} \\\n`;
   if (audio.syncToVideo && audio.name !== 'None') {
-    cmd += `  -stream_loop -1 -i "${audio.name}" \\\n`;
+    cmd += `  -stream_loop -1 -i "${resolvePath(AUDIO_DIR, audio.name)}" \\\n`;
   }
   
   cmd += `  -filter_complex "${filterComplex}" \\\n`;
@@ -75,15 +90,17 @@ export function buildFfmpegCommand(
   }
 
   // Codec specifics
-  if (config.outputCodec === 'libx264') {
+  const effectiveCodec = config.outputCodec === 'copy' ? 'libx264' : config.outputCodec;
+  if (effectiveCodec === 'libx264') {
     cmd += `  -c:v libx264 -preset ${config.preset} -crf ${config.crf} -pix_fmt yuv420p \\\n`;
-  } else if (config.outputCodec === 'libx265') {
+  } else if (effectiveCodec === 'libx265') {
     cmd += `  -c:v libx265 -preset ${config.preset} -crf ${config.crf} -pix_fmt yuv420p \\\n`;
-  } else if (config.outputCodec === 'prores') {
+  } else if (effectiveCodec === 'prores') {
     cmd += `  -c:v prores_ks -profile:v 3 -vendor ap10 -pix_fmt yuv422p10le \\\n`;
   }
 
-  cmd += `  -shortest -y output_graded_assembler.mp4`;
+  const totalDuration = videos.reduce((sum, v) => sum + v.duration, 0);
+  cmd += `  -t ${totalDuration.toFixed(2)} -y output_graded_assembler.mp4`;
   return cmd;
 }
 
@@ -160,7 +177,7 @@ function buildFilterComplex(
   if (lut.active) {
     const intensityVal = lut.intensity.toFixed(2);
     // Apply 3D LUT via lut3d filter. Under macOS, file path is configured
-    filter += `[v_concat]lut3d='${lut.fileName}':interp=tetrahedral[v_lut]; `;
+    filter += `[v_concat]lut3d='${resolvePath(LUT_DIR, lut.fileName)}':interp=tetrahedral[v_lut]; `;
     
     // Mix original frames and LUT frames based on intensity parameter inside script
     if (lut.intensity < 1) {
@@ -187,8 +204,11 @@ export function buildMacOsScript(
   config: FfmpegConfig
 ): string {
   const isLossless = config.outputCodec === 'copy' && !lut.active;
-  const videoNames = videos.map(v => v.name);
+  const effectiveCodec = config.outputCodec === 'copy' ? 'libx264' : config.outputCodec;
   const totalDuration = videos.reduce((sum, v) => sum + v.duration, 0);
+  const fps = videos[0]?.fps || 24;
+  const totalFrames = Math.round(totalDuration * fps);
+  const resolvedVideos = videos.map(v => resolvePath(VIDEO_DIR, v.name));
 
   return `#!/bin/bash
 
@@ -196,7 +216,7 @@ export function buildMacOsScript(
 # Vitch - Generated macOS Compilation Script
 # Target System: macOS (Darwin)
 # Executable Type: POSIX Bash Script
-# Codec Config: ${config.outputCodec.toUpperCase()} (Mode: ${isLossless ? 'Lossless Stream Copy' : 'Active Transcode / Grade'})
+# Codec Config: ${isLossless ? 'COPY' : (config.outputCodec === 'copy' ? 'H.264 (LUT Auto-fallback)' : config.outputCodec.toUpperCase())} (Mode: ${isLossless ? 'Lossless Stream Copy' : 'Active Transcode / Grade'})
 # Estimated Video Length: ${totalDuration.toFixed(2)} seconds
 # ==============================================================================
 
@@ -205,7 +225,7 @@ LOG_FILE="vitch_pipeline.log"
 echo "======================================================================" > "$LOG_FILE"
 echo "VITCH PIPELINE RUN - $(date)" >> "$LOG_FILE"
 echo "SYSTEM ATTRS: $(uname -a)" >> "$LOG_FILE"
-echo "OUTPUT CODEC: ${config.outputCodec.toUpperCase()} | TARGET LENGTH: ${totalDuration}s" >> "$LOG_FILE"
+echo "OUTPUT CODEC: ${isLossless ? 'COPY' : (config.outputCodec === 'copy' ? 'H.264 (LUT Auto-fallback)' : config.outputCodec.toUpperCase())} | TARGET LENGTH: ${totalDuration}s" >> "$LOG_FILE"
 echo "======================================================================" >> "$LOG_FILE"
 
 log_info() {
@@ -265,19 +285,19 @@ echo -e "\${BLUE}[STEP 2/5]\${NC} Auditing directory files queue..."
 log_info "Step 2: Commencing media file inventory verification"
 
 # Declaring array of input files to process
-INPUT_FILES=(${videoNames.map(name => `"${name}"`).join(' ')})
+INPUT_FILES=(${resolvedVideos.map(path => `"${path}"`).join(' ')})
 
 # Iterate over files to check for presence and sizes
 MISSING_FILES=0
 for f in "\${INPUT_FILES[@]}"; do
-    if [ ! -f "$f" ]; then
-        echo -e "  \${RED}[ERR]\${NC} Missing Source File: \${BOLD}$f\${NC} (Ensure script runs in same directory)"
-        log_err "Missing source asset: $f"
+    if [ ! -f "\$f" ]; then
+        echo -e "  \${RED}[ERR]\${NC} Missing Source File: \${BOLD}\$f\${NC} (Please verify path)"
+        log_err "Missing source asset: \$f"
         ((MISSING_FILES++))
     else
-        FILE_SIZE=$(du -h "$f" | cut -f1)
-        echo -e "  \${GREEN}[OK]\${NC} Found File: \${BLUE}$f\${NC} [Size: $FILE_SIZE]"
-        log_info "Found valid asset: $f with size $FILE_SIZE"
+        FILE_SIZE=$(du -h "\$f" | cut -f1)
+        echo -e "  \${GREEN}[OK]\${NC} Found File: \${BLUE}\$f\${NC} [Size: \$FILE_SIZE]"
+        log_info "Found valid asset: \$f with size \$FILE_SIZE"
     fi
 done
 
@@ -296,26 +316,26 @@ log_info "Step 3: Building list file: vitch_concat_manifest.txt"
 MANIFEST_FILE="vitch_concat_manifest.txt"
 rm -f "\$MANIFEST_FILE"
 
-${videoNames.map(name => `echo "file '${name}'" >> "\$MANIFEST_FILE"`).join('\n')}
+${resolvedVideos.map(path => `echo "file '${path}'" >> "\$MANIFEST_FILE"`).join('\n')}
 
 echo -e "\${GREEN}[SUCCESS]\${NC} Manifest updated at \${BOLD}\$MANIFEST_FILE\${NC}"
-log_info "Manifest file compiled with ${videoNames.length} items."
+log_info "Manifest file compiled with ${videos.length} items."
 
 # STEP 4: Audio Loop & LUT Validation Space
 ${
   audio.name !== 'None' && audio.syncToVideo
     ? `echo -e " "
 echo -e "\${BLUE}[STEP 4/5]\${NC} Verifying backing audio element..."
-AUDIO_FILE="${audio.name}"
-log_info "Step 4: Checking audio file $AUDIO_FILE"
+AUDIO_FILE="${resolvePath(AUDIO_DIR, audio.name)}"
+log_info "Step 4: Checking audio file \$AUDIO_FILE"
 if [ ! -f "\$AUDIO_FILE" ]; then
-    echo -e "  \${YELLOW}[WARN] Audio track '\$AUDIO_FILE' not found in current directory.\${NC}"
-    log_err "Warning: Backup track $AUDIO_FILE missing. Falling back to default raw stream."
+    echo -e "  \${YELLOW}[WARN] Audio track '\$AUDIO_FILE' not found.\${NC}"
+    log_err "Warning: Backup track \$AUDIO_FILE missing. Falling back to default raw stream."
     echo -e "  Executing ffmpeg fallback: Audio will be ignored/extracted from source clips."
     HAS_AUDIO=0
 else
     echo -e "  \${GREEN}[OK]\${NC} Audio Track Configured: \${MAGENTA}\$AUDIO_FILE\${NC} (Volume set to: ${audio.volume * 100}%)"
-    log_info "Stage active background loop: $AUDIO_FILE at gain ${audio.volume}"
+    log_info "Stage active background loop: \$AUDIO_FILE at gain ${audio.volume}"
     HAS_AUDIO=1
 fi`
     : `HAS_AUDIO=0`
@@ -325,17 +345,17 @@ ${
   lut.active
     ? `echo -e " "
 echo -e "\${BLUE}[STEP 4/5 - COLOR]\${NC} Checking LUT File: \${BOLD}${lut.fileName}\${NC}"
-LUT_FILE="${lut.fileName}"
-log_info "Step 4 (Color): Checking LUT cube parameters $LUT_FILE"
+LUT_FILE="${resolvePath(LUT_DIR, lut.fileName)}"
+log_info "Step 4 (Color): Checking LUT cube parameters \$LUT_FILE"
 if [ ! -f "\$LUT_FILE" ]; then
     echo -e "  \${RED}[ERR] LUT File '\$LUT_FILE' was not found.\${NC}"
-    log_err "FATAL Error: Specified 3D LUT Cube $LUT_FILE is missing."
+    log_err "FATAL Error: Specified 3D LUT Cube \$LUT_FILE is missing."
     echo -e "  FFmpeg cannot run tetrahedral interpolations without the physical .cube file present."
     echo -e "  Please ensure the correct file is saved locally under \${BOLD}\$LUT_FILE\${NC}."
     exit 1
 else
     echo -e "  \${GREEN}[CONVERT]\${NC} Color parameters mapping: Cinematic 3D interpolations active."
-    log_info "LUT $LUT_FILE verified. Colorspace profile loaded: ${lut.colorSpace}"
+    log_info "LUT \$LUT_FILE verified. Colorspace profile loaded: ${lut.colorSpace}"
 fi`
     : `log_info "Color grading bypassed: Lossless / Untouched direct pass through."`
 }
@@ -356,8 +376,8 @@ ${
     ? `if [ \$HAS_AUDIO -eq 1 ]; then
     echo -e "\${CYAN}Format: Lossless Stitching + Audio Music Sync/Loop\${NC}"
     log_info "Executing Lossless concat demuxer with audio mix"
-    ffmpeg -f concat -safe 0 -i "\$MANIFEST_FILE" -stream_loop -1 -i "${audio.name}" \\
-      -c:v copy -c:a aac -filter:a "volume=${audio.volume}" -map 0:v -map 1:a -shortest -y "\$OUTPUT_NAME" >> "\$LOG_FILE" 2>&1
+    ffmpeg -f concat -safe 0 -i "\$MANIFEST_FILE" -stream_loop -1 -i "\$AUDIO_FILE" \\
+      -c:v copy -c:a aac -filter:a "volume=${audio.volume}" -map 0:v -map 1:a -t ${totalDuration.toFixed(3)} -y "\$OUTPUT_NAME" >> "\$LOG_FILE" 2>&1
 else
     echo -e "\${CYAN}Format: Primary Lossless Stream Copy (Instant Concat)\${NC}"
     log_info "Executing instant dry demux stream copy"
@@ -367,21 +387,44 @@ fi`
   FILTER_CHAIN="${buildFilterComplex(videos, lut, config, audio).replace(/"/g, '\\"')}"
   log_info "Compiled Filter Chain: \$FILTER_CHAIN"
   
-  ffmpeg ${videoNames.map((n, i) => `-i "${n}"`).join(' ')} \\
-    ${audio.name !== 'None' && audio.syncToVideo ? `-stream_loop -1 -i "${audio.name}" \\\n` : ''}    -filter_complex "\$FILTER_CHAIN" \\
+  # Setup progress variables
+  TOTAL_FRAMES=${totalFrames}
+  BAR_WIDTH=30
+  
+  echo -e "\${CYAN}Format: Active Transcode / Grade (with real-time progress bar)\${NC}"
+  
+  ffmpeg ${resolvedVideos.map(path => `-i "${path}"`).join(' ')} \\
+    ${audio.name !== 'None' && audio.syncToVideo ? `-stream_loop -1 -i "\$AUDIO_FILE" \\\n` : ''}    -filter_complex "\$FILTER_CHAIN" \\
     -map "[v_out]" \\
     ${
       audio.name !== 'None' && audio.syncToVideo
         ? `-map ${videos.length}:a \\`
         : (videos.some(v => v.hasAudio !== false) ? `-map "[a_out]" \\` : '')
     }
-    -c:v ${config.outputCodec === 'prores' ? 'prores_ks' : config.outputCodec} \\
+    -c:v ${effectiveCodec === 'prores' ? 'prores_ks' : effectiveCodec} \\
     ${
-      config.outputCodec !== 'prores'
+      effectiveCodec !== 'prores'
         ? `-preset ${config.preset} -crf ${config.crf} -pix_fmt yuv420p`
         : '-profile:v 3 -vendor ap10 -pix_fmt yuv422p10le'
     } \\
-    -shortest -y "\$OUTPUT_NAME" >> "\$LOG_FILE" 2>&1`
+    -t ${totalDuration.toFixed(3)} -progress - -nostats -y "\$OUTPUT_NAME" 2>> "\$LOG_FILE" | while read -r line; do
+      if [[ "\$line" =~ ^frame=([0-9]+) ]]; then
+        FRAME=\${BASH_REMATCH[1]}
+        PERCENT=\$(( FRAME * 100 / TOTAL_FRAMES ))
+        if [ \$PERCENT -gt 100 ]; then PERCENT=100; fi
+        
+        FILLED=\$(( PERCENT * BAR_WIDTH / 100 ))
+        UNFILLED=\$(( BAR_WIDTH - FILLED ))
+        
+        BAR=""
+        for ((i=0; i<FILLED; i++)); do BAR="\${BAR}█"; done
+        for ((i=0; i<UNFILLED; i++)); do BAR="\${BAR}░"; done
+        
+        printf "\\r\\033[K\\033[0;33m[PENDING]\\033[0m Encoding: [\${BAR}] \${PERCENT}%% (Frame: \${FRAME}/\${TOTAL_FRAMES})"
+      fi
+  done
+  printf "\\r\\033[K\\033[0;32m[SUCCESS]\\033[0m Encoding complete! [██████████████████████████████] 100%%\\n"
+  echo "" >> "\$LOG_FILE"`
 }
 
 STATUS=\$?

@@ -1,5 +1,7 @@
 import { VideoFile } from '../types';
 import { Play, Trash2, ArrowUp, ArrowDown, FolderOpen, Plus, Sparkles, Film } from 'lucide-react';
+
+const VIDEO_DIR = ((import.meta as any).env?.VITE_VIDEO_DIR || '').trim();
 import React, { useState } from 'react';
 
 interface FileWorkspaceProps {
@@ -34,7 +36,7 @@ export default function FileWorkspace({
   onScanSuccess,
 }: FileWorkspaceProps) {
 
-  const [scanPath, setScanPath] = useState('~/Movies');
+  const [scanPath, setScanPath] = useState(VIDEO_DIR || '~/Movies');
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
@@ -145,7 +147,14 @@ export default function FileWorkspace({
           ) : !isLocalHost ? (
             <span className="text-amber-500 font-semibold select-none">⚠️ Directory scan requires running locally (npm run dev)</span>
           ) : (
-            <span className="text-gray-500">Press Enter or click Scan to read files from disk</span>
+            <div className="flex items-center space-x-1.5 text-gray-500">
+              <span>Press Enter or click Scan to read files from disk</span>
+              {VIDEO_DIR && (
+                <span className="text-emerald-400 font-bold select-none border border-emerald-500/20 px-1.5 py-0.5 rounded bg-emerald-500/5 uppercase text-[8px] font-mono">
+                  env: {VIDEO_DIR}
+                </span>
+              )}
+            </div>
           )}
           <span className="text-gray-500 font-bold uppercase">{videos.length} videos queued</span>
         </div>
