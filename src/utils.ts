@@ -6,12 +6,37 @@ const AUDIO_DIR = ((import.meta as any).env?.VITE_AUDIO_DIR || '').trim();
 
 function resolvePath(dir: string, file: string): string {
   if (!file) return '';
-  if (!dir) return file;
-  if (file.startsWith('/') || file.startsWith('~') || file.startsWith('./')) {
-    return file;
+  
+  // Clean up quotes and trim whitespace from file and dir
+  let cleanFile = file.trim().replace(/^['"]|['"]$/g, '');
+  let cleanDir = dir.trim().replace(/^['"]|['"]$/g, '');
+
+  // If the file path is absolute, ignore the directory from env
+  if (
+    cleanFile.startsWith('/') ||
+    cleanFile.startsWith('~') ||
+    cleanFile.startsWith('./') ||
+    /^[a-zA-Z]:/.test(cleanFile)
+  ) {
+    return cleanFile;
   }
-  const separator = dir.endsWith('/') ? '' : '/';
-  return `${dir}${separator}${file}`;
+
+  if (!cleanDir) return cleanFile;
+
+  // If the environment variable directory itself points to a file, get its parent directory
+  if (/\.[a-zA-Z0-9]+$/.test(cleanDir)) {
+    const lastSlash = Math.max(cleanDir.lastIndexOf('/'), cleanDir.lastIndexOf('\\'));
+    if (lastSlash !== -1) {
+      cleanDir = cleanDir.substring(0, lastSlash);
+    } else {
+      cleanDir = '';
+    }
+  }
+
+  if (!cleanDir) return cleanFile;
+
+  const separator = (cleanDir.endsWith('/') || cleanDir.endsWith('\\')) ? '' : '/';
+  return `${cleanDir}${separator}${cleanFile}`;
 }
 
 export function formatTime(seconds: number): string {
@@ -176,17 +201,17 @@ function buildFilterComplex(
   // 3. Apply LUT filtering if active
   if (lut.active) {
     const intensityVal = lut.intensity.toFixed(2);
-    // Apply 3D LUT via lut3d filter. Under macOS, file path is configured
-    filter += `[v_concat]lut3d='${resolvePath(LUT_DIR, lut.fileName)}':interp=tetrahedral[v_lut]; `;
     
     // Mix original frames and LUT frames based on intensity parameter inside script
     if (lut.intensity < 1) {
+      // Apply 3D LUT via lut3d filter. Under macOS, file path is configured
+      filter += `[v_concat]lut3d='${resolvePath(LUT_DIR, lut.fileName)}':interp=tetrahedral[v_lut]; `;
       filter += `[v_concat][v_lut]blend=all_expr='A*(1-${intensityVal})+B*${intensityVal}'[v_out]`;
     } else {
-      filter += `[v_lut]split[v_out]`; // direct bypass alias
+      filter += `[v_concat]lut3d='${resolvePath(LUT_DIR, lut.fileName)}':interp=tetrahedral[v_out]`;
     }
   } else {
-    filter += `[v_concat]split[v_out]`;
+    filter += `[v_concat]null[v_out]`;
   }
 
   return filter;
@@ -209,6 +234,30 @@ export function buildMacOsScript(
   const fps = videos[0]?.fps || 24;
   const totalFrames = Math.round(totalDuration * fps);
   const resolvedVideos = videos.map(v => resolvePath(VIDEO_DIR, v.name));
+
+  // Pre-build physical ffmpeg command to avoid backslash newline bugs in shell scripts
+  let ffmpegCmd = 'ffmpeg ' + resolvedVideos.map(path => `-i "${path}"`).join(' ') + ' \\\n';
+  if (audio.name !== 'None' && audio.syncToVideo) {
+    ffmpegCmd += '    -stream_loop -1 -i "$AUDIO_FILE" \\\n';
+  }
+  ffmpegCmd += '    -filter_complex "$FILTER_CHAIN" \\\n';
+  ffmpegCmd += '    -map "[v_out]" \\\n';
+  
+  if (audio.name !== 'None' && audio.syncToVideo) {
+    ffmpegCmd += `    -map ${videos.length}:a \\\n`;
+  } else if (videos.some(v => v.hasAudio !== false)) {
+    ffmpegCmd += '    -map "[a_out]" \\\n';
+  }
+  
+  ffmpegCmd += `    -c:v ${effectiveCodec === 'prores' ? 'prores_ks' : effectiveCodec} \\\n`;
+  
+  if (effectiveCodec !== 'prores') {
+    ffmpegCmd += `    -preset ${config.preset} -crf ${config.crf} -pix_fmt yuv420p \\\n`;
+  } else {
+    ffmpegCmd += '    -profile:v 3 -vendor ap10 -pix_fmt yuv422p10le \\\n';
+  }
+  
+  ffmpegCmd += '    -t ' + totalDuration.toFixed(3) + ' -progress - -nostats -y "$OUTPUT_NAME"';
 
   return `#!/bin/bash
 
@@ -393,21 +442,7 @@ fi`
   
   echo -e "\${CYAN}Format: Active Transcode / Grade (with real-time progress bar)\${NC}"
   
-  ffmpeg ${resolvedVideos.map(path => `-i "${path}"`).join(' ')} \\
-    ${audio.name !== 'None' && audio.syncToVideo ? `-stream_loop -1 -i "\$AUDIO_FILE" \\\n` : ''}    -filter_complex "\$FILTER_CHAIN" \\
-    -map "[v_out]" \\
-    ${
-      audio.name !== 'None' && audio.syncToVideo
-        ? `-map ${videos.length}:a \\`
-        : (videos.some(v => v.hasAudio !== false) ? `-map "[a_out]" \\` : '')
-    }
-    -c:v ${effectiveCodec === 'prores' ? 'prores_ks' : effectiveCodec} \\
-    ${
-      effectiveCodec !== 'prores'
-        ? `-preset ${config.preset} -crf ${config.crf} -pix_fmt yuv420p`
-        : '-profile:v 3 -vendor ap10 -pix_fmt yuv422p10le'
-    } \\
-    -t ${totalDuration.toFixed(3)} -progress - -nostats -y "\$OUTPUT_NAME" 2>> "\$LOG_FILE" | while read -r line; do
+  ${ffmpegCmd} 2>> "\$LOG_FILE" | while read -r line; do
       if [[ "\$line" =~ ^frame=([0-9]+) ]]; then
         FRAME=\${BASH_REMATCH[1]}
         PERCENT=\$(( FRAME * 100 / TOTAL_FRAMES ))
